@@ -1,5 +1,5 @@
 
-// Modules
+// Type Files
 // pub mod chronolog;
 pub mod ticker;
 

@@ -8,6 +8,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(TimeStructures {})
 
+        // One and done tests that are NOT intended to panic.
         .add_systems(Startup, (
             test_default,
             test_new,
@@ -15,9 +16,6 @@ fn main() {
             test_new_with_countdown,
             test_getters,
             test_set_current_value,
-        ).chain())
-
-        .add_systems(Startup, (
             test_set_start_value,
             test_add_to_start,
             test_add_to_current,
@@ -26,31 +24,82 @@ fn main() {
             test_current_to_min,
             test_current_to_max,
             test_comparisons,
-        ).chain())
-
-        .add_systems(Startup, (
-            test_comparisons,
             test_get_distance_from_start,
             test_get_countdown_value,
             test_pause_unpause,
             test_ticker_states,
             test_tick_loop,
+        ).chain().in_set(TestSet::First))
+
+        // One and done tests that are intended to panic.
+        .add_systems(Startup, (
             test_new_panic_guard,
             test_countdown_panic_guard,
-        ).chain())
+        ).chain().in_set(TestSet::Second))
+
+        .configure_sets(Startup, TestSet::First.before(TestSet::Second))
+
         .run();
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ################################################################################################# //
+// HELPERS
 
+/// Used to tell Bevy on .add_systems() calls which tests to run first.  When used in conjunction
+/// with .chain().in_set(INSERT_ENUM_VALUE_HERE) on .add_systems() and with a followed .configure_sets()
+/// call, it will force systems to run in sequential order even when they are split by different
+/// .add_systems() calls. The reason why this exists is to get around Bevy's concurrent running of
+/// add_system groups.
+///
+/// EXAMPLE
+/// ```ignore
+/// .add_systems(Startup, (
+///     system_1,
+///     system_2,
+/// ).chain().in_set(TestSet::First))
+///
+/// .add_systems(Startup, (
+///     system_3,
+///     system_4,
+/// ).chain().in_set(TestSet::Second))
+///
+/// .configure_sets(Startup, TestSet::First.before(TestSet::Second))
+/// ```
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+enum TestSet {
+    First,
+    Second,
+}
+
+/// Used to label terminal output for tests into different colors.  Applied colors will tack onto
+/// text until a different color is set.
+///
+/// ## EXAMPLE
+/// ```ignore
+/// println!("{}I am a message!{} Here are some words!", TestColors::PASS, TestColors::RESET);
+/// ```
+/// The words "I am a message!" will be whatever color is associated with PASS, and the string "Here
+/// are some words!" will be whatever color is associated with RESET.
+struct TestColors;
+impl TestColors {
+    const RESET: &'static str = "\x1b[0m";  // \x1b[0m  == WHATEVER THE DEFAULT COLOR IS FOR THE TERMINAL
+    const FAIL:  &'static str = "\x1b[31m"; // \x1b[31m == RED TERMINAL TEXT
+    const PASS:  &'static str = "\x1b[32m"; // \x1b[32m == GREEN TERMINAL TEXT
+    const INFO:  &'static str = "\x1b[33m"; // \x1b[33m == YELLOW TERMINAL TEXT
+}
+
+/// Used for the [`check()`] function to print out a test message for the passed condition.
 fn pass(test: &str) {
-    println!("[PASS] {}", test);
+    println!("{}[PASS]{} {}", TestColors::PASS, TestColors::RESET, test);
 }
 
+/// Used for the [`check()`] function to print out a failed message for the passed condition.
 fn fail(test: &str, reason: &str) {
-    println!("[FAIL] {} — {}", test, reason);
+    println!("{}[FAIL]{} {} — {}", TestColors::FAIL, TestColors::RESET, test, reason);
 }
 
+/// Used to determine if a test failed or passed based on the passed condition.  The supplied
+/// reason is a failure message, not for if the test passed.
 fn check(test: &str, condition: bool, reason: &str) {
     if condition {
         pass(test);
@@ -59,6 +108,7 @@ fn check(test: &str, condition: bool, reason: &str) {
         fail(test, reason);
     }
 }
+// ############################################################################################### //
 
 // ─── Safety Note ─────────────────────────────────────────────────────────────
 //
@@ -78,10 +128,10 @@ fn check(test: &str, condition: bool, reason: &str) {
 /// residual values.
 fn test_default() {
     let t = Ticker::default();
-    check("default::current_value is 0",        t.get_current_value() == 0,                     "expected 0");
-    check("default::start_value is 0",          t.get_start_value()   == 0,                     "expected 0");
-    check("default::digit is 0",                t.get_digit()         == 0,                     "expected 0");
-    check("default::state is Ticking",          t.get_state()         == &TickerStates::Ticking,"expected Ticking");
+    check("default::current_value is 0",t.get_current_value() == 0,                     "expected 0");
+    check("default::start_value is 0",  t.get_start_value()   == 0,                     "expected 0");
+    check("default::digit is 0",        t.get_digit()         == 0,                     "expected 0");
+    check("default::state is Ticking",  t.get_state()         == &TickerStates::Ticking,"expected Ticking");
 }
 
 /// Verifies that Ticker::new() correctly initializes all fields from a given starting value.
@@ -474,6 +524,7 @@ fn test_ticker_states() {
 
 /// Confirms new() panics on out-of-range values using std::panic::catch_unwind.
 fn test_new_panic_guard() {
+    println!("{}[INFO] The following 2 panics are intentional and expected.{}", TestColors::INFO, TestColors::RESET);
     let over  = std::panic::catch_unwind(|| Ticker::new(101));
     let under = std::panic::catch_unwind(|| Ticker::new(-101));
     check("new::panics on value > 100",  over.is_err(),  "expected panic");
@@ -482,6 +533,7 @@ fn test_new_panic_guard() {
 
 /// Confirms new_with_countdown() panics on out-of-range durations.
 fn test_countdown_panic_guard() {
+    println!("{}[INFO] The following 2 panics are intentional and expected.{}", TestColors::INFO, TestColors::RESET);
     let over  = std::panic::catch_unwind(|| Ticker::new_with_countdown(101));
     let under = std::panic::catch_unwind(|| Ticker::new_with_countdown(0));
     check("new_with_countdown::panics on duration > 100", over.is_err(),  "expected panic");
