@@ -7,4 +7,4 @@ license = "Apache-2.0"
 
 [dependencies]
 bevy = "0.18.1"
-mirth_engine_testing_tools = "0.0.1"
+mirth_engine_testing_tools = "0.0.2"

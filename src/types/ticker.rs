@@ -1,6 +1,7 @@
 
 // Imports
 use bevy::prelude::*;
+use mirth_engine_testing_tools::check_if_value_is_within_range;
 
 /// By themselves, tickers can be used to create simple timers.  Although they are best used in conjunction
 /// as an inner element to a greater time structure to create some wicked tickety-tocking.
@@ -15,90 +16,144 @@ use bevy::prelude::*;
 /// Otherwise, I recommend the Chronolog structure.
 #[derive(Component, Reflect, Debug)]
 pub struct Ticker {
-    pub start_value: i8,
-    pub current_value: i8,
-    pub interval: f32,
-    pub is_paused: bool,
-    pub is_looping: bool,
-    pub is_ticking_up: bool,
-    pub is_handling_frame_spikes: bool,
-    accrued_delta: f32,
+    start_value:                i8,
+    current_value:              i8,
+    end_value:                  i8,
+    interval:                   f32,
+    accrued_delta:              f32,
+    is_paused:                  bool,
+    is_looping:                 bool,
+    is_ticking_up:              bool,
+    is_handling_frame_spikes:   bool,
 }
 
 impl Default for Ticker {
-
-    /// The default ticker counts up every second when its .tick method is used and all other fields start at 0.
     fn default() -> Self {
         Self {
             start_value:                0,
             current_value:              0,
+            end_value:                  100,
             interval:                   1.0,
+            accrued_delta:              0.0,
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up:              true,
             is_handling_frame_spikes:   true,
-            accrued_delta:              0.0,
         }
     }
 }
 
 impl Ticker {
 
-    /// Develops a new Ticker using a passed value for its start_value.
     ///
-    /// Valid start values are [`TICKER_MIN_VALUE`] to [`TICKER_MAX_VALUE`] (inclusive).
-    /// **Values outside this range will cause a panic.**
-    ///
-    /// When a second passes, the timer within the Ticker fires (increases current_value by 1 for each second that passes).
-    pub fn new(starting_value: i8) -> Self {
+    pub fn new(
+        start_value: i8,
+        current_value: i8,
+        end_value: i8,
+        interval: f32,
+        is_paused: bool,
+        is_looping: bool,
+        is_ticking_up: bool,
+        is_handling_frame_spikes: bool,
+    ) -> Self {
         Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            interval:                   1.0,
-            is_paused:                  false,
-            is_looping:                 true,
-            is_ticking_up:              true,
-            is_handling_frame_spikes:   true,
-            accrued_delta:              0.0,
+            start_value,
+            current_value,
+            end_value,
+            interval,
+            accrued_delta: 0.0,
+            is_paused,
+            is_looping,
+            is_ticking_up,
+            is_handling_frame_spikes,
         }
     }
 
-    /// Develops a new Ticker using a passed value for its start_value.
     ///
-    /// Valid start values are [`TICKER_MIN_VALUE`] to [`TICKER_MAX_VALUE`] (inclusive).
-    /// **Values outside this range will cause a panic.**
-    ///
-    /// When the passed duration in second(s) passes, the timer within the Ticker fires (increases current_value by 1 for each duration that passes).
-    pub fn new_with_interval(starting_value: i8, seconds_required_for_a_tick: f32) -> Self {
+    pub fn new_onetime_with_frame_spike_handling(
+        starting_value: i8,
+        end_value: i8,
+        interval: f32,
+        is_ticking_up: bool,
+    ) -> Self {
         Self {
             start_value:                starting_value,
             current_value:              starting_value,
-            interval:                   seconds_required_for_a_tick,
-            is_paused:                  false,
-            is_looping:                 true,
-            is_ticking_up:              true,
-            is_handling_frame_spikes:   true,
+            end_value,
+            interval,
             accrued_delta:              0.0,
-        }
-    }
-
-    /// Creates a Ticker for countdown purposes.  Pass in the desired countdown duration as a number of seconds to pass.
-    ///
-    /// Valid countdown durations are 1 to [`i8::MAX`] (pass 10 in for a 10-second countdown); inclusive range.
-    /// **Values outside this range will cause a panic.**
-    ///
-    /// The start_value for Tickers that use this constructor is calculated by ([`LOOP_POINT`] - DURATION).
-    pub fn new_countdown(trigger_value: i8, countdown_duration: i8) -> Self {
-        Self {
-            start_value:                trigger_value,
-            current_value:              countdown_duration,
-            interval:                   1.0,
             is_paused:                  false,
             is_looping:                 false,
-            is_ticking_up:              false,
+            is_ticking_up,
             is_handling_frame_spikes:   true,
-            accrued_delta:              0.0,
         }
+    }
+
+    ///
+    pub fn new_onetime_without_frame_spike_handling(
+        starting_value: i8,
+        end_value: i8,
+        interval: f32,
+        is_ticking_up: bool,
+    ) -> Self {
+        Self {
+            start_value:                starting_value,
+            current_value:              starting_value,
+            end_value,
+            interval,
+            accrued_delta:              0.0,
+            is_paused:                  false,
+            is_looping:                 false,
+            is_ticking_up,
+            is_handling_frame_spikes:   false,
+        }
+    }
+
+    ///
+    pub fn new_looper_with_frame_spike_handling(
+        starting_value: i8,
+        end_value: i8,
+        interval: f32,
+        is_ticking_up: bool,
+    ) -> Self {
+        Self {
+            start_value:                starting_value,
+            current_value:              starting_value,
+            end_value,
+            interval,
+            accrued_delta:              0.0,
+            is_paused:                  false,
+            is_looping:                 true,
+            is_ticking_up,
+            is_handling_frame_spikes:   true,
+        }
+    }
+
+    ///
+    pub fn new_looper_without_frame_spike_handling(
+        starting_value: i8,
+        end_value: i8,
+        interval: f32,
+        is_ticking_up: bool,
+    ) -> Self {
+        Self {
+            start_value:                starting_value,
+            current_value:              starting_value,
+            end_value,
+            interval,
+            accrued_delta:              0.0,
+            is_paused:                  false,
+            is_looping:                 true,
+            is_ticking_up,
+            is_handling_frame_spikes:   false,
+        }
+    }
+
+    /// Returns the start_value of a Ticker.
+    ///
+    /// start_value can change through other methods, so don't treat it as a consistent value.
+    pub fn get_start_value(&self) -> i8 {
+        self.start_value
     }
 
     /// Returns the current_value of a Ticker.
@@ -106,24 +161,47 @@ impl Ticker {
         self.current_value
     }
 
-    /// Returns the start_value of a Ticker.
+    /// Returns the end_value of a Ticker.
     ///
-    /// It's important to note that start_value can change through set_start_value(), so don't
-    /// treat it as a consistent value.
-    pub fn get_start_value(&self) -> i8 {
+    /// end_value can change through other methods, so don't treat it as a consistent value.
+    pub fn get_end_value(&self) -> i8 {
         self.start_value
     }
 
-    /// Returns the difference between current_value and start_value, which does mean that negative values
-    /// are a possibility for the result.
+    /// Returns the interval of a Ticker.
     ///
-    /// A negative result indicates that the current_value is less than the start_value of the Ticker.
+    /// The interval value can change through other methods, so don't treat it as a consistent value.
+    /// Also, it's important to remember that the interval is what dictates how long in seconds that it takes
+    /// for current_value to increase or decrease; direction depends on is_ticking_up.
+    pub fn get_interval(&self) -> f32 {
+        self.interval
+    }
+
+    /// Returns the difference between current_value and start_value.
     ///
-    /// A positive result indicates that the current_value is greater than the start_value of the Ticker.
+    /// Will only return positive numbers.
+    pub fn get_difference_from_start(&self) -> i16 {
+        let min: i16 = self.current_value.min(self.start_value) as i16;
+        let max: i16 = self.current_value.max(self.start_value) as i16;
+        max - min
+    }
+
+    /// Returns the difference between current_value and end_value.
     ///
-    /// RESULT = CURRENT_VALUE - START_VALUE
-    pub fn get_difference(&self) -> i16 {
-        self.current_value as i16 - self.start_value as i16
+    /// Will only return positive numbers.
+    pub fn get_difference_from_end(&self) -> i16 {
+        let min: i16 = self.current_value.min(self.end_value) as i16;
+        let max: i16 = self.current_value.max(self.end_value) as i16;
+        max - min
+    }
+
+    /// Returns the difference between start_value and end_value.
+    ///
+    /// Will only return positive numbers.
+    pub fn get_difference_from_start_to_end(&self) -> i16 {
+        let min: i16 = self.start_value.min(self.end_value) as i16;
+        let max: i16 = self.start_value.max(self.end_value) as i16;
+        max - min
     }
 
     /// Returns the digit in the ones-place of current_value.
@@ -167,11 +245,15 @@ impl Ticker {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
+    /// ### What is DDA?
+    /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
+    /// from a number or if a digit just happens to be 0.
+    ///
     /// ### Example
     /// If current_value is 6, then -1 would be returned.  The flipside would be if current_value is
     /// 103, then 0 would be returned.  The potential for -1 to be returned allows for differentiation
     /// between a digit dropping and if a digit is simply 0 at a given time.
-    pub fn get_tens_digit_with_drop_accounting(&self) -> i8 {
+    pub fn get_tens_digit_with_dda(&self) -> i8 {
 
         if self.current_value.abs() < 10 {
             (self.current_value.abs() / 10) % 10
@@ -187,12 +269,16 @@ impl Ticker {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
+    /// ### What is DDA?
+    /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
+    /// from a number or if a digit just happens to be 0.
+    ///
     /// ### Example
     /// If current_value is 17, then -1 would be returned.  The flipside would be if current_value is
     /// 1032 (not realistic for i8, just an example), then 0 would be returned.  The potential for -1
     /// to be returned allows for differentiation between a digit dropping and if a digit is simply 0 at
     /// a given time.
-    pub fn get_hundreds_digit_with_drop_accounting(&self) -> i8 {
+    pub fn get_hundreds_digit_with_dda(&self) -> i8 {
 
         if self.current_value.abs() < 100 {
             (self.current_value.abs() / 100) % 10
@@ -202,41 +288,40 @@ impl Ticker {
         }
     }
 
-    /// Returns true if the current_value of the Ticker is below its start_value, false otherwise.
-    pub fn is_below_start_value(&self) -> bool {
-        self.current_value < self.start_value
-    }
-
-    /// Returns true if the current_value of the Ticker is above its start_value, false otherwise.
-    pub fn is_above_start_value(&self) -> bool {
-        self.current_value > self.start_value
-    }
-
     /// Returns true if the current_value and the start_value are equal to one another, false otherwise.
-    ///
-    /// When relying solely on frames, I think this would be rather difficult to trigger.  However,
-    /// using the reset method and setters may allow for this to return true often depending on
-    /// how said methods are used.
     pub fn is_equal_to_start_value(&self) -> bool {
         self.current_value == self.start_value
     }
 
+    /// Returns true if the current_value and the end_value are equal to one another, false otherwise.
+    pub fn is_equal_to_end_value(&self) -> bool {
+        self.current_value == self.end_value
+    }
+
     /// Pauses a ticker's ticking.
+    ///
+    /// This prevents the .tick method from doing any calculations.
     pub fn pause(&mut self) {
         self.is_paused = true;
     }
 
     /// Unpauses a ticker's ticking.
+    ///
+    /// This allows the .tick method to resume its calculations.
     pub fn unpause(&mut self) {
         self.is_paused = false;
     }
 
     /// Causes the ticker's current_value to count up.
+    ///
+    /// Will allow calculated ticks inside the .tick method to add to current_value, rather than subtract.
     pub fn tick_up(&mut self) {
         self.is_ticking_up = true;
     }
 
     /// Causes the ticker's current_value to count down.
+    ///
+    /// Will allow calculated ticks inside the .tick method to subtract from current_value, rather than add.
     pub fn tick_down(&mut self) {
         self.is_ticking_up = false;
     }
@@ -251,16 +336,35 @@ impl Ticker {
 
     /// Adds to the start_value of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`TICKER_MIN_VALUE`] to [`TICKER_MAX_VALUE`] (inclusive).
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`i8::MIN`] to [`i8::MAX`] (inclusive).
     pub fn add_to_start_value(&mut self, value: i8) {
         self.start_value = self.start_value.saturating_add(value);
     }
 
     /// Adds to the current_value of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`TICKER_MIN_VALUE`] to [`TICKER_MAX_VALUE`] (inclusive).
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within start_value to end_value (inclusive).
     pub fn add_to_current_value(&mut self, value: i8) {
-        self.current_value = self.current_value.saturating_add(value);
+        let min = self.start_value.min(self.end_value);
+        let max = self.start_value.max(self.end_value);
+        self.current_value = self.current_value.saturating_add(value).clamp(min, max);
+    }
+
+    /// Adds to the end_value of the ticker by the passed value.  Can take in negatives for subtraction.
+    ///
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`i8::MIN`] to [`i8::MAX`] (inclusive).
+    pub fn add_to_end_value(&mut self, value: i8) {
+        self.end_value = self.end_value.saturating_add(value);
+    }
+
+    /// Adds to the interval of the ticker by the passed value.  Can take in negatives for subtraction.
+    ///
+    /// # IMPORTANT
+    /// Interval can never be 0 or a negative number (or go past f32::MAX), the reasoning for this is that it would cause the
+    /// .tick method to create crazy values. If your goal is to slow time or an accumulation to the point that it reverses it,
+    /// I suggest you flip the tick direction using .tick_up or .tick_down depending on which direction you want the counting to flip to.
+    pub fn add_to_interval(&mut self, value: f32) {
+        self.interval = (self.interval + value).clamp(f32::MIN_POSITIVE, f32::MAX);
     }
 
     /// Used to advance a ticker.  Takes in a time.delta() call off the time resource (Res<Time>) that Bevy provides.
@@ -328,31 +432,33 @@ impl Ticker {
                 false => self.current_value.saturating_sub(ticks),
             };
 
+            // DETERMINING CURRENT_VALUE'S BOUNDARIES
+            // Since start_value and end_value can be either negative or positive at any given moment,
+            // we must throw both values against one another to determine whose greater/lesser than
+            // the other so that we can properly clamp down current_value to its allowed range.
+            let min = self.start_value.min(self.end_value);
+            let max = self.start_value.max(self.end_value);
+
             // RESET DETERMINATION + CURRENT_VALUE ASSIGNMENT
             // Will change current_value's assignment using new_value based on if the Ticker is set to loop or not.
             match self.is_looping {
 
                 // LOOPING IS ACTIVE
                 // Assign current_value to its new host and then reset it to the Ticker's start_value
-                // if either of the i8 boundaries were hit.
+                // if either of its boundaries -- start_value and end_value -- are hit.
                 true => {
                     self.current_value = new_value;
-                    if self.current_value == i8::MAX || self.current_value == i8::MIN {
+                    if self.current_value <= min || self.current_value >= max {
                         self.current_value = self.start_value;
                     }
                 },
 
                 // LOOPING IS INACTIVE
-                // current_value can assume its new host without worry.
+                // current_value can assume its new host after new_value has been clamped to the allowed range.
                 false => {
-                    self.current_value = new_value;
+                    self.current_value = new_value.clamp(min, max);
                 },
             };
         }
     }
-}
-
-/// Determines if the value is within the acceptable range that is passed in.  Will cause a panic if the value is out of the range.
-fn check_value(value: i8, minimum: i8, maximum: i8) {
-    assert!(value >= minimum && value <= maximum, "TICKER PANIC: Value must be between {} and {} (inclusive). Got {}.", minimum, maximum, value);
 }
