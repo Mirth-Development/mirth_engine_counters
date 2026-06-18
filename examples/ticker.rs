@@ -75,22 +75,7 @@ fn main() {
         .run();
 }
 
-
-
-// ####################################### SAFETY NOTE ########################################### //
-//
-// ticker_ticking runs every frame and queries for Ticker<V, P> components attached
-// to entities via Query<&mut Ticker<V, P>>.  Every test below constructs Tickers as
-// plain local stack values — they are never spawned into the ECS — so ticker_ticking
-// will never see or mutate them.  Tests that need to verify tick() behavior call it
-// directly with a known f32 delta instead of relying on real elapsed time, keeping
-// results fully deterministic regardless of frame timing.
-//
-// ############################################################################################## //
-
-
-
-// ##################################### CONSTRUCTION TESTS ###################################### //
+// ################################### NON-PANIC STARTUP TESTS ################################## //
 /// Verifies that Ticker::default() produces the documented baseline state:
 /// start_value = 0, current_value = 0, end_value = 100, interval = 1.0,
 /// not paused, looping, ticking up, and handling frame spikes.
@@ -229,11 +214,7 @@ fn test_new() {
         "expected 40"
     );
 }
-// ############################################################################################## //
 
-
-
-// ####################################### GETTER TESTS ########################################## //
 /// Verifies that all getter methods return the values set at construction.
 fn test_getters() {
 
@@ -288,11 +269,7 @@ fn test_getters() {
         "expected true"
     );
 }
-// ############################################################################################## //
 
-
-
-// ####################################### SETTER TESTS ########################################## //
 /// Verifies that set_current_value() updates current_value, including clamping
 /// to the start_value/end_value range rather than panicking on out-of-range input.
 fn test_set_current_value() {
@@ -383,11 +360,7 @@ fn test_set_end_value() {
         "expected 200"
     );
 }
-// ############################################################################################## //
 
-
-
-// ######################################## ADD TESTS ############################################ //
 /// Verifies that add_to_start_value() modifies start_value and clamps at V::MIN/V::MAX.
 fn test_add_to_start_value() {
 
@@ -509,11 +482,7 @@ fn test_add_to_interval() {
         "expected interval > 0.0"
     );
 }
-// ############################################################################################## //
 
-
-
-// ################################### RESET / BOUNDARY TESTS ##################################### //
 /// Verifies that reset() restores current_value to start_value, for both a positive
 /// and a negative start_value.
 fn test_reset() {
@@ -599,11 +568,7 @@ fn test_set_current_to_max() {
         "expected 100"
     );
 }
-// ############################################################################################## //
 
-
-
-// ##################################### COMPARISON TESTS ######################################### //
 /// Verifies the three equality-comparison methods: is_current_equal_to_start(),
 /// is_current_equal_to_end(), and is_start_equal_to_end().
 fn test_equal_methods() {
@@ -715,12 +680,7 @@ fn test_difference_methods() {
         "expected 0"
     );
 }
-// ############################################################################################## //
 
-
-
-
-// ####################################### DIGIT TESTS ############################################ //
 /// Verifies digit_1(), digit_2(), and digit_3() correctly extract the ones, tens,
 /// and hundreds digits of current_value, regardless of sign.
 fn test_digit_methods() {
@@ -858,11 +818,7 @@ fn test_digit_with_dda_methods() {
         "expected 0"
     );
 }
-// ############################################################################################## //
 
-
-
-// ###################################### STATE TOGGLE TESTS ###################################### //
 /// Verifies that pause() and unpause() correctly update is_paused().
 fn test_pause_unpause() {
 
@@ -947,13 +903,7 @@ fn test_frame_spike_toggle() {
         "expected true"
     );
 }
-// ############################################################################################## //
 
-
-
-
-
-// #################################### PERCENTAGE TESTS ########################################## //
 /// Verifies that percentage_from_start() returns the correct fraction of current_value's
 /// distance from start_value, and returns -1.0 when start_value equals end_value.
 fn test_percentage_from_start() {
@@ -1029,11 +979,7 @@ fn test_percentage_from_end() {
         "expected -1.0"
     );
 }
-// ############################################################################################## //
 
-
-
-// ######################################## TICK TESTS ############################################ //
 /// Verifies that tick() increments current_value when ticking up and enough delta
 /// time has accrued to cross the interval threshold.
 fn test_tick_counts_up() {
@@ -1146,7 +1092,7 @@ fn test_tick_frame_spike_handling() {
 
 
 
-// ###################################### PANIC GUARD TESTS ####################################### //
+// ###################################### PANIC STARTUP TESTS ################################### //
 /// Confirms new() panics on a current_value outside the start_value/end_value range,
 /// using std::panic::catch_unwind to verify the panic without crashing the test suite.
 fn test_new_panic_guard() {
@@ -1174,7 +1120,7 @@ fn test_new_panic_guard() {
 
 
 
-// ###################################### UPDATE-SET TESTS ######################################## //
+// ###################################### UPDATE TESTS ######################################## //
 //
 // Unlike the Startup tests above, these tests spawn a real Ticker<i32, f32> entity into
 // the ECS so that ticker_ticking (registered by TimeStructures) actually queries and
@@ -1186,52 +1132,6 @@ fn test_new_panic_guard() {
 // This will produce a continuous stream of [PASS]/[FAIL] messages while the app runs —
 // that's expected and is the point: a single [FAIL] appearing at any point means
 // ticker_ticking violated an invariant on that frame.
-
-/// Spawns a single looping Ticker<i32, f32> entity for the per-frame tests to observe.
-fn setup_update_test_ticker(mut commands: Commands) {
-
-    let ticker: Ticker<i32, f32> = Ticker::new(
-        0,
-        0,
-        1_000_000,
-        1.0,
-        false,
-        true,
-        true,
-        true
-    );
-    commands.spawn((ticker, ForwardTestMarker));
-}
-/// Verifies that the spawned Ticker's current_value always stays within its
-/// start_value/end_value range, confirming ticker_ticking's clamping logic holds
-/// up under real, continuously-accumulating frame deltas rather than the single
-/// hand-fed deltas used in the Startup tests.
-fn test_update_ticker_stays_within_range(
-    tickers: Query<&Ticker<i32, f32>>,
-) {
-    for ticker in &tickers {
-        let current = ticker.current_value();
-        let start = ticker.start_value();
-        let end = ticker.end_value();
-
-        let min = start.min(end);
-        let max = start.max(end);
-
-        check_condition(
-            current >= min && current <= max,
-            "update::ticker_ticking keeps current_value within start_value/end_value range",
-            "expected current_value to remain within range"
-        );
-    }
-}
-// ############################################################################################## //
-
-
-// ################################## ADDITIONAL UPDATE-SET TESTS ################################ //
-//
-// These extend the per-frame test coverage beyond the original check.
-// Each spawns its own dedicated entity so the tests don't interfere with one another or with the
-// original test_update_ticker_* systems.
 
 /// Marker component distinguishing each Update-set test's dedicated ticker entity,
 /// since multiple Ticker<i32, f32> entities now coexist in the world and each test
@@ -1251,30 +1151,21 @@ struct CountdownTestMarker;
 #[derive(Component)]
 struct AccrualTestMarker;
 
-/// Verifies that a spawned, unpaused, ticking-up Ticker's current_value never decreases
-/// from one frame to the next, confirming ticker_ticking is advancing it forward over time.
-///
-/// Tracks the previous frame's value in a Local<Option<i32>> since this needs to compare
-/// across frames rather than within a single one.
-fn test_update_ticker_advances_forward(
-    tickers: Query<&Ticker<i32, f32>, With<ForwardTestMarker>>,
-    mut previous_value: Local<Option<i32>>,
-) {
-    for ticker in &tickers {
-        let current = ticker.current_value();
+/// Spawns a single looping Ticker<i32, f32> entity for the per-frame tests to observe.
+fn setup_update_test_ticker(mut commands: Commands) {
 
-        if let Some(previous) = *previous_value {
-            check_condition(
-                current >= previous,
-                "update::ticker_ticking never decreases current_value while ticking up",
-                "expected current_value to be >= previous frame's value"
-            );
-        }
-
-        *previous_value = Some(current);
-    }
+    let ticker: Ticker<i32, f32> = Ticker::new(
+        0,
+        0,
+        1_000_000,
+        1.0,
+        false,
+        true,
+        true,
+        true
+    );
+    commands.spawn((ticker, ForwardTestMarker));
 }
-
 
 /// Spawns a paused Ticker entity to confirm ticker_ticking leaves paused tickers untouched
 /// across real frames, not just within a single .tick() call as the Startup test checks.
@@ -1342,6 +1233,53 @@ fn setup_update_test_accrual_ticker(mut commands: Commands) {
         true
     );
     commands.spawn((ticker, AccrualTestMarker));
+}
+
+/// Verifies that the spawned Ticker's current_value always stays within its
+/// start_value/end_value range, confirming ticker_ticking's clamping logic holds
+/// up under real, continuously-accumulating frame deltas rather than the single
+/// hand-fed deltas used in the Startup tests.
+fn test_update_ticker_stays_within_range(
+    tickers: Query<&Ticker<i32, f32>>,
+) {
+    for ticker in &tickers {
+        let current = ticker.current_value();
+        let start = ticker.start_value();
+        let end = ticker.end_value();
+
+        let min = start.min(end);
+        let max = start.max(end);
+
+        check_condition(
+            current >= min && current <= max,
+            "update::ticker_ticking keeps current_value within start_value/end_value range",
+            "expected current_value to remain within range"
+        );
+    }
+}
+
+/// Verifies that a spawned, unpaused, ticking-up Ticker's current_value never decreases
+/// from one frame to the next, confirming ticker_ticking is advancing it forward over time.
+///
+/// Tracks the previous frame's value in a Local<Option<i32>> since this needs to compare
+/// across frames rather than within a single one.
+fn test_update_ticker_advances_forward(
+    tickers: Query<&Ticker<i32, f32>, With<ForwardTestMarker>>,
+    mut previous_value: Local<Option<i32>>,
+) {
+    for ticker in &tickers {
+        let current = ticker.current_value();
+
+        if let Some(previous) = *previous_value {
+            check_condition(
+                current >= previous,
+                "update::ticker_ticking never decreases current_value while ticking up",
+                "expected current_value to be >= previous frame's value"
+            );
+        }
+
+        *previous_value = Some(current);
+    }
 }
 
 /// Verifies that a paused Ticker's current_value never changes across any frame,

@@ -177,6 +177,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
 
+        // Panic Evaluators
         check_if_value_is_within_range(start_value, V::MIN, V::MAX);
         check_if_value_is_within_range(current_value, min, max);
         check_if_value_is_within_range(end_value, V::MIN, V::MAX);
@@ -202,8 +203,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_ticking_up: bool,
     ) -> Self {
 
-        check_if_value_is_within_range(V::MIN, starting_value, V::MAX);
-        check_if_value_is_within_range(V::MIN, end_value, V::MAX);
+        // Panic Evaluators
+        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
+        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
         Self {
             start_value:                starting_value,
@@ -226,8 +228,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_ticking_up: bool,
     ) -> Self {
 
-        check_if_value_is_within_range(V::MIN, starting_value, V::MAX);
-        check_if_value_is_within_range(V::MIN, end_value, V::MAX);
+        // Panic Evaluators
+        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
+        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
         Self {
             start_value:                starting_value,
@@ -250,8 +253,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_ticking_up: bool,
     ) -> Self {
 
-        check_if_value_is_within_range(V::MIN, starting_value, V::MAX);
-        check_if_value_is_within_range(V::MIN, end_value, V::MAX);
+        // Panic Evaluators
+        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
+        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
         Self {
             start_value:                starting_value,
@@ -274,8 +278,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_ticking_up: bool,
     ) -> Self {
 
-        check_if_value_is_within_range(V::MIN, starting_value, V::MAX);
-        check_if_value_is_within_range(V::MIN, end_value, V::MAX);
+        // Panic Evaluators
+        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
+        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
         Self {
             start_value:                starting_value,
@@ -298,17 +303,23 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// start_value can change through other methods, so don't treat it as a consistent value.
     #[inline]
-    pub fn start_value(&self) -> V { self.start_value }
+    pub fn start_value(&self) -> V {
+        self.start_value
+    }
 
     /// Returns the current_value of a Ticker.
     #[inline]
-    pub fn current_value(&self) -> V { self.current_value }
+    pub fn current_value(&self) -> V {
+        self.current_value
+    }
 
     /// Returns the end_value of a Ticker.
     ///
     /// end_value can change through other methods, so don't treat it as a consistent value.
     #[inline]
-    pub fn end_value(&self) -> V { self.end_value }
+    pub fn end_value(&self) -> V {
+        self.end_value
+    }
 
     /// Returns the interval of a Ticker.
     ///
@@ -316,23 +327,33 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// Also, it's important to remember that the interval is what dictates how long in seconds that it takes
     /// for current_value to increase or decrease; direction depends on is_ticking_up.
     #[inline]
-    pub fn interval(&self) -> P { self.interval }
+    pub fn interval(&self) -> P {
+        self.interval
+    }
 
     ///
     #[inline]
-    pub fn is_paused(&self) -> bool { self.is_paused }
+    pub fn is_paused(&self) -> bool {
+        self.is_paused
+    }
 
     ///
     #[inline]
-    pub fn is_looping(&self) -> bool { self.is_looping }
+    pub fn is_looping(&self) -> bool {
+        self.is_looping
+    }
 
     ///
     #[inline]
-    pub fn is_ticking_up(&self) -> bool { self.is_ticking_up }
+    pub fn is_ticking_up(&self) -> bool {
+        self.is_ticking_up
+    }
 
     ///
     #[inline]
-    pub fn is_handling_frame_spikes(&self) -> bool { self.is_handling_frame_spikes }
+    pub fn is_handling_frame_spikes(&self) -> bool {
+        self.is_handling_frame_spikes
+    }
     // ######################################################################################## //
 
 
@@ -484,7 +505,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// It is not possible for the ones digit to be dropped, hence the reason why this method has no
     /// "with_drop_accounting" version - there is always a ones-place.
     ///
-    /// #### No Conditional?
+    /// #### No Conditional in Implementation?
     /// This digit does not need to check current_value since all integer types can contain at least
     /// 3 digits.  0 will still be returned if the digit isn't being used.
     #[inline]
@@ -498,7 +519,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return a 0 if the digit doesn't exist.
     ///
-    /// #### No Conditional?
+    /// #### No Conditional in Implementation?
     /// This digit does not need to check current_value since all integer types can contain at least
     /// 3 digits.  0 will still be returned if the digit isn't being used.
     #[inline]
@@ -512,7 +533,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return a 0 if the digit doesn't exist.
     ///
-    /// #### No Conditional?
+    /// #### No Conditional in Implementation?
     /// This digit does not need to check current_value since all integer types can contain at least
     /// 3 digits.  0 will still be returned if the digit isn't being used.
     #[inline]
@@ -860,7 +881,8 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// # IMPORTANT
     /// Interval can never be 0, a negative number, or go past f32::MAX; the reasoning for this is that it would cause the
     /// .tick method to create crazy values. If your goal is to slow time or slow an accumulation to the point that it reverses it,
-    /// I suggest you flip the tick direction using .tick_up or .tick_down depending on which direction you want the counting to flip to.
+    /// I suggest you flip the tick direction using .tick_up or .tick_down at a specific current_value or
+    /// after the rate of slow/speed you're applying has hit a specific value.
     #[inline]
     pub fn add_to_interval(&mut self, value: P) {
         self.interval = (self.interval + value).clamp(P::MIN_POSITIVE, P::MAX);
@@ -942,13 +964,19 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         (end - current) * range_reciprocal
     }
 
-    /// Will set the current_value to be equal to the start_value and the digit field of the Ticker
-    /// will be changed according to the new ones-place value that is seen after current_value's reset.
-    ///
-    /// Digit is always to reflect current_value's ones-place.
+    /// Will set the current_value to be equal to the start_value.
     #[inline]
     pub fn reset(&mut self) {
         self.current_value = self.start_value;
+    }
+
+    /// Will set the current_value to be equal to the start_value and zero out the accrued_delta.
+    ///
+    /// Best to use when you want to completely wipe whatever has been accumulated.
+    #[inline]
+    pub fn hard_reset(&mut self) {
+        self.current_value = self.start_value;
+        self.accrued_delta = P::from_f64(0.0);
     }
 
     /// Used to advance a ticker.  Takes in a time.delta() call off the time resource (Res<Time>) that Bevy provides.
