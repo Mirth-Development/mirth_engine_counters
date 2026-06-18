@@ -1479,7 +1479,6 @@ version = "0.2.0"
 dependencies = [
  "bevy",
  "mirth_engine_testing_tools",
- "num-traits",
 ]
 
 [[package]]

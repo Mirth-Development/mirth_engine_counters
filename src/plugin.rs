@@ -9,9 +9,23 @@ use crate::systems::*;
 pub struct TimeStructures {}
 impl Plugin for TimeStructures {
     fn build(&self, app: &mut App) {
-        app.register_type::<Ticker>();
+
+        // Ticker Type Registration + Systems
+        app.register_type::<Ticker<i8, f32>>();
+        app.register_type::<Ticker<i16, f32>>();
+        app.register_type::<Ticker<i32, f32>>();
+        app.register_type::<Ticker<i8, f64>>();
+        app.register_type::<Ticker<i16, f64>>();
+        app.register_type::<Ticker<i32, f64>>();
+        app.add_systems(First, ticker_ticking::<i8, f32>);
+        app.add_systems(First, ticker_ticking::<i16, f32>);
+        app.add_systems(First, ticker_ticking::<i32, f32>);
+        app.add_systems(First, ticker_ticking::<i8, f64>);
+        app.add_systems(First, ticker_ticking::<i16, f64>);
+        app.add_systems(First, ticker_ticking::<i32, f64>);
+
+        // Text
         // app.register_type::<Chronolog>();
-        app.add_systems(First, ticker_ticking);
         // app.add_systems(First, chronolog_ticking);
     }
 }

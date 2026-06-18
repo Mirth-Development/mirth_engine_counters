@@ -1,7 +1,7 @@
 
 use bevy::prelude::*;
-use mirth_engine_testing_tools::{check, TestSet};
-use bevy_time_structures::{Ticker, TickerStates, TimeStructures};
+use mirth_engine_testing_tools::{check_condition, TestSet};
+use bevy_time_structures::{Ticker, TimeStructures};
 
 // Tests for Ticker
 fn main() {
