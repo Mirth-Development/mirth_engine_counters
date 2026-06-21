@@ -8,3 +8,52 @@ license = "Apache-2.0"
 [dependencies]
 bevy = "0.18.1"
 mirth_engine_testing_tools = "0.0.3"
+
+[features]
+default = [
+    "ticker_type_i8_f32",
+    "ticker_systems_i8_f32",
+]
+# Ticker Features
+ticker_type_i8_f32     = []
+ticker_type_i16_f32    = []
+ticker_type_i32_f32    = []
+ticker_type_i8_f64     = []
+ticker_type_i16_f64    = []
+ticker_type_i32_f64    = []
+ticker_systems_i8_f32  = []
+ticker_systems_i16_f32 = []
+ticker_systems_i32_f32 = []
+ticker_systems_i8_f64  = []
+ticker_systems_i16_f64 = []
+ticker_systems_i32_f64 = []
+ticker-types = [
+    "ticker_type_i8_f32",
+    "ticker_type_i16_f32",
+    "ticker_type_i32_f32",
+    "ticker_type_i8_f64",
+    "ticker_type_i16_f64",
+    "ticker_type_i32_f64",
+]
+ticker-systems = [
+    "ticker_type_i8_f32",
+    "ticker_type_i16_f32",
+    "ticker_type_i32_f32",
+    "ticker_type_i8_f64",
+    "ticker_type_i16_f64",
+    "ticker_type_i32_f64",
+]
+ticker-all = [
+    "ticker_type_i8_f32",
+    "ticker_type_i16_f32",
+    "ticker_type_i32_f32",
+    "ticker_type_i8_f64",
+    "ticker_type_i16_f64",
+    "ticker_type_i32_f64",
+    "ticker_systems_i8_f32",
+    "ticker_systems_i16_f32",
+    "ticker_systems_i32_f32",
+    "ticker_systems_i8_f64",
+    "ticker_systems_i16_f64",
+    "ticker_systems_i32_f64",
+]

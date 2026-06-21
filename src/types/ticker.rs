@@ -333,6 +333,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     ///
     #[inline]
+    pub fn accrued_delta(&self) -> P {
+        self.accrued_delta
+    }
+
+    ///
+    #[inline]
     pub fn is_paused(&self) -> bool {
         self.is_paused
     }

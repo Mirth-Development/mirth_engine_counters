@@ -65,7 +65,7 @@ fn main() {
             // test_update_looping_ticker_never_exceeds_end,
             // test_update_countdown_ticker_never_increases,
             // test_update_accrual_ticker_has_not_fired_early,
-            test_update_print_current_value,
+            test_update_print_info,
         ).chain().in_set(TestSet::Set3))
 
         .configure_sets(Startup, TestSet::Set0.before(TestSet::Set1))
@@ -1154,15 +1154,15 @@ struct AccrualTestMarker;
 /// Spawns a single looping Ticker<i32, f32> entity for the per-frame tests to observe.
 fn setup_update_test_ticker(mut commands: Commands) {
 
-    let ticker: Ticker<i32, f32> = Ticker::new(
+    let ticker: Ticker<i8, f32> = Ticker::new(
         0,
         0,
-        1_000_000,
-        1.0,
+        100,
+        0.1,
+        false,
         false,
         true,
-        true,
-        true
+        false
     );
     commands.spawn((ticker, ForwardTestMarker));
 }
@@ -1358,11 +1358,16 @@ fn test_update_accrual_ticker_has_not_fired_early(
 /// Prints the dedicated forward-test Ticker's current_value every frame.
 /// Purely observational — no assertions, just visibility into what the value
 /// is actually doing frame to frame while debugging.
-fn test_update_print_current_value(
-    tickers: Query<&Ticker<i32, f32>, With<ForwardTestMarker>>,
+fn test_update_print_info(
+    tickers: Query<&Ticker<i8, f32>, With<ForwardTestMarker>>,
 ) {
     for ticker in &tickers {
-        println!("current_value: {}", ticker.current_value());
+
+        println!("START_VALUE: {}", ticker.start_value());
+        println!("CURRENT_VALUE: {}", ticker.current_value());
+        println!("END_VALUE: {}", ticker.end_value());
+        println!("INTERVAL: {}", ticker.interval());
+        println!("ACCRUED_DELTA: {}\n", ticker.accrued_delta());
     }
 }
 
