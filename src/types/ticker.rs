@@ -12,7 +12,7 @@ use mirth_engine_testing_tools::{check_if_value_is_within_range};
 /// for the Ticker values is adjustable due to this trait.  9 times out of 10 you'll likely just need
 /// i8 tickers.
 ///
-/// # IMPORTANT
+/// #### Why Declare a MIN and MAX?
 /// The MIN and MAX declarations are present to help avoid absolute errors on integer ranges.  MAX isn't
 /// really impacted by this, it's declared for readability purposes.  But MIN's assignment on value types
 /// will always add 1 to an integer's minimum to avoid things like -128 in the i8 datatype becoming 128
@@ -89,9 +89,12 @@ impl TickerValue for i32 {
 ///
 /// Supports f32 and f64 for accrued_delta and interval fields within Ticker.
 ///
-/// # IMPORTANT
-/// Using f64 for Ticker precision will result in more accurate calculations inside the .tick() method.
-/// Useful if accuracy is crucial, otherwise pointless.  In most cases, f64 precision is not necessary.
+/// #### Why Have f32 and f64 for Precision?
+/// f32 and f64 types for precision determine how accurate the calculations inside the .tick() method are.
+/// f32 being less accurate, f64 being more. Precision control is useful if ridiculous levels of accuracy
+/// is crucial, otherwise pointless.  In most cases, f64 precision is not necessary.
+///
+/// #### When to Consider More Precision?
 /// I'd say the only scenarios where the precision jump becomes important is for big clocks (world clocks)
 /// that can impact many entities, or if PvP is involved in a game and the timing of things should be as
 /// accurate as possible to reduce frustration.
@@ -138,6 +141,7 @@ impl TickerPrecision for f64 {
 // ################################# TICKER IMPLEMENTATION ###################################### //
 /// A generic, self-contained counter that advances a value over time at a fixed interval.
 ///
+/// MAKE SURE TO EXPLAIN TIME IN VARIOUS WAYS, DON'T JUST USE FRAMES!  USE THE CLOWNS OVER BLINKS EXAMPLE!
 #[derive(Component, Reflect, Debug)]
 pub struct Ticker<V: TickerValue, P: TickerPrecision> {
     start_value:                V,
@@ -148,7 +152,7 @@ pub struct Ticker<V: TickerValue, P: TickerPrecision> {
     is_paused:                  bool,
     is_looping:                 bool,
     is_ticking_up:              bool,
-    is_handling_frame_spikes:   bool,
+    is_handling_time_spikes:    bool, // SHOULD THIS BE IS_HANDLING_DELTA_SPIKES?
 }
 
 impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
@@ -163,7 +167,7 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up:              true,
-            is_handling_frame_spikes:   true,
+            is_handling_time_spikes:    true,
         }
     }
 }
@@ -183,7 +187,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_paused: bool,
         is_looping: bool,
         is_ticking_up: bool,
-        is_handling_frame_spikes: bool,
+        is_handling_time_spikes: bool,
     ) -> Self {
 
         let min = start_value.min(end_value);
@@ -203,7 +207,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused,
             is_looping,
             is_ticking_up,
-            is_handling_frame_spikes,
+            is_handling_time_spikes,
         }
     }
 
@@ -228,7 +232,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 false,
             is_ticking_up,
-            is_handling_frame_spikes:   true,
+            is_handling_time_spikes:    true,
         }
     }
 
@@ -253,7 +257,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 false,
             is_ticking_up,
-            is_handling_frame_spikes:   false,
+            is_handling_time_spikes:    false,
         }
     }
 
@@ -278,7 +282,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up,
-            is_handling_frame_spikes:   true,
+            is_handling_time_spikes:    true,
         }
     }
 
@@ -303,7 +307,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up,
-            is_handling_frame_spikes:   false,
+            is_handling_time_spikes:    false,
         }
     }
     // ######################################################################################## //
@@ -341,11 +345,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// determined entirely by whatever unit the caller's delta is expressed in.
     ///
     /// The ticker_ticking system happens to pass seconds (the difference in time between
-    /// 2 frames, sourced from Bevy's Time resource), so interval and accrued_delta are conventionally seconds when
+    /// 2 frames, sourced from Bevy's Time resource), so interval is conventionally seconds when
     /// using that system. But nothing stops a custom implementation from feeding .tick() a delta
     /// in any other unit that meaningfully represents change over some interval.  In a custom
     /// implementation, it could literally be the difference in the number of clowns seen between
-    /// two blinks.
+    /// two blinks.  In such a case, interval would have clowns as its unit.
     #[inline]
     pub fn interval(&self) -> P {
         self.interval
@@ -366,11 +370,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// determined entirely by whatever unit the caller's delta is expressed in.
     ///
     /// The ticker_ticking system happens to pass seconds (the difference in time between
-    /// 2 frames, sourced from Bevy's Time resource), so interval and accrued_delta are conventionally seconds when
+    /// 2 frames, sourced from Bevy's Time resource), so accrued_delta is conventionally seconds between frames when
     /// using that system. But nothing stops a custom implementation from feeding .tick() a delta
     /// in any other unit that meaningfully represents change over some interval.  In a custom
     /// implementation, it could literally be the difference in the number of clowns seen between
-    /// two blinks.
+    /// two blinks.  In such a case, accrued_delta would be clowns seen between blinks.
     #[inline]
     pub fn accrued_delta(&self) -> P {
         self.accrued_delta
@@ -394,10 +398,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.is_ticking_up
     }
 
-    /// Returns whether or not a Ticker is set to handle frame spikes in its .tick() method.
+    /// Returns whether or not a Ticker is set to handle time spikes (delays) in its .tick() method.
     #[inline]
-    pub fn is_handling_frame_spikes(&self) -> bool {
-        self.is_handling_frame_spikes
+    pub fn is_handling_time_spikes(&self) -> bool {
+        self.is_handling_time_spikes
     }
     // ######################################################################################## //
 
@@ -484,14 +488,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     ///
     #[inline]
-    pub fn start_handling_frame_spikes(&mut self) {
-        self.is_handling_frame_spikes = true;
+    pub fn start_handling_time_spikes(&mut self) {
+        self.is_handling_time_spikes = true;
     }
 
     ///
     #[inline]
-    pub fn stop_handling_frame_spikes(&mut self) {
-        self.is_handling_frame_spikes = false;
+    pub fn stop_handling_time_spikes(&mut self) {
+        self.is_handling_time_spikes = false;
     }
     // ######################################################################################## //
 
@@ -523,6 +527,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// # Why Does This Method Exist?
     /// start_value and end_value can equal one another since their values can be changed or set to
     /// the same value at the creation of a Ticker instance.
+    ///
+    /// # When Should I Use This Method?
+    /// Only scenario I can think for using this would be when the bounds of a Ticker are slowly tightening
+    /// and you need something to check when they have finally met one another.  It is possible to tighten
+    /// the bounds by constantly setting `start_value` and `end_value` to new numbers.
     #[inline]
     pub fn is_start_equal_to_end(&self) -> bool {
         self.start_value == self.end_value
@@ -569,7 +578,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Small Note
     /// It is NOT possible for the ones digit to be dropped, hence the reason why this method has no
-    /// "with_drop_accounting" version - there is always a ones-place.
+    /// digit-drop accounting version - there is always a ones-place.
     ///
     /// #### No Conditional in Implementation?
     /// This digit method does not need to check if current_value is holding a value that contains this digit
@@ -703,11 +712,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -730,11 +739,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -757,11 +766,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -784,11 +793,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -811,11 +820,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -838,11 +847,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -865,11 +874,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -892,11 +901,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Will return -1 if the digit is NOT being used.
     ///
-    /// ### What is DDA?
+    /// #### What is DDA?
     /// DDA stands for Digit Drop Accounting.  It can be used to determine if a digit has been dropped
     /// from a number or if a digit just happens to be 0.
     ///
-    /// ### Example
+    /// #### Example
     /// - If `current_value` is `6`, `digit_2_with_dda` returns `-1` — no tens-place exists.
     /// - If `current_value` is `63`, `digit_2_with_dda` returns `6` — the tens-place exists and is `6`.
     /// - If `current_value` is `103`, `digit_3_with_dda` returns `1` — the hundreds-place exists and is `1`.
@@ -919,7 +928,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     // ################################### ADD METHODS ######################################## //
     /// Adds to the start_value of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`i8::MIN`] to [`i8::MAX`] (inclusive).
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within `V::MIN` to `V::MAX` (inclusive).
     #[inline]
     pub fn add_to_start_value(&mut self, value: V) {
         self.start_value = self.start_value.sat_add(value).clamp(V::MIN, V::MAX);
@@ -927,7 +936,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     /// Adds to the current_value of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within start_value to end_value (inclusive).
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within `start_value` to `end_value` (inclusive).
     pub fn add_to_current_value(&mut self, value: V) {
         let min = self.start_value.min(self.end_value);
         let max = self.start_value.max(self.end_value);
@@ -936,7 +945,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     /// Adds to the end_value of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within [`i8::MIN`] to [`i8::MAX`] (inclusive).
+    /// Will not let the result of summing cause overflow or wrapping; results will always be within `V::MIN` to `V::MAX` (inclusive).
     #[inline]
     pub fn add_to_end_value(&mut self, value: V) {
         self.end_value = self.end_value.sat_add(value).clamp(V::MIN, V::MAX);
@@ -944,10 +953,13 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     /// Adds to the interval of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
-    /// # IMPORTANT
-    /// Interval can never be 0, a negative number, or go past f32::MAX; the reasoning for this is that it would cause the
-    /// .tick method to create crazy values. If your goal is to slow time or slow an accumulation to the point that it reverses it,
-    /// I suggest you flip the tick direction using .tick_up or .tick_down at a specific current_value or
+    /// #### What Values Can Interval Be Set To?
+    /// Interval can never be 0, a negative number, or go past `P::MAX`; the reasoning for this is that it would cause the
+    /// .tick method to create crazy values.
+    ///
+    /// #### Can Interval Flip Direction of a Ticker?
+    /// No. If your goal is to slow time or slow an accumulation to the point that it reverses it,
+    /// I suggest you flip the tick direction using .tick_up() or .tick_down() at a specific current_value or
     /// after the rate of slow/speed you're applying has hit a specific value.
     #[inline]
     pub fn add_to_interval(&mut self, value: P) {
@@ -964,10 +976,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// A return value of `0.0` means `current_value` is at `start_value`, and `1.0` means it is
     /// at `end_value`.
     ///
-    /// # Special Case
+    /// #### Special Case
     /// Returns `-1.0` if `start_value` and `end_value` are equal, as no meaningful range exists.
     ///
-    /// # Examples
+    /// #### Examples
     /// ```
     /// // start_value = 0, current_value = 40, end_value = 100
     /// // Returns 0.4
@@ -1000,10 +1012,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// A return value of `0.0` means `current_value` is at `end_value`, and `1.0` means it is
     /// at `start_value`.
     ///
-    /// # Special Case
+    /// #### Special Case
     /// Returns `-1.0` if `start_value` and `end_value` are equal, as no meaningful range exists.
     ///
-    /// # Examples
+    /// #### Examples
     /// ```
     /// // start_value = 0, current_value = 60, end_value = 100
     /// // Returns 0.4
@@ -1038,7 +1050,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     /// Will set the current_value to be equal to the start_value and zero out the accrued_delta.
     ///
-    /// # When To Use This Over Reset?
+    /// #### When To Use This Over Reset?
     /// Best to use when you want to completely wipe whatever has been accumulated, including the
     /// timing state.  If you need to carry over the timing state (the remainder in the last tick
     /// calculation), then do NOT use this.
@@ -1048,7 +1060,30 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.accrued_delta = P::from_f64(0.0);
     }
 
+    /// #### Description
+    /// Used to advance a Ticker by collecting a delta at any period of a user's choosing, *usually* on
+    /// an event that happens consistently.  A common delta to use with such a method would be the
+    /// difference in time between 2 frames.
     ///
+    /// #### What Impacts Tick Calculation?
+    /// The fields of a Ticker which impact the tick calculation inside this method are as follows:
+    /// - `is_paused` : If true, this will prevent the tick method from doing anything.  If false,
+    /// the tick method will calculate ticks and determine if current_value needs to be changed.
+    /// - `is_looping` : If true, this will reset current_value to start_value when either current_value
+    /// hits or goes past start_value/end_value (boundaries).  If false, current_value will be equal to
+    /// whatever boundary it hits or goes past.
+    /// - `is_ticking_up` : If true, calculated ticks will increase current_value.  If false,
+    /// ticks will decrease current_value.
+    /// - `is_handling_time_spikes` : If true, tick calculation will account for ticks generated during
+    /// time spikes (delta is part of the tick calculation).  If false, tick calculation will only
+    /// generate 1 tick for every .tick() call (delta is NOT part of the tick calculation).
+    ///
+    /// #### What is Delta's Unit?
+    /// The unit of delta is based on what is passed into the tick method.  If the passed value is the difference in seconds between
+    /// 2 frames, then that's delta's unit.  Now, how this impacts accrued_delta and interval is the important
+    /// part - delta's unit determines accrued_delta's and interval's unit type.  Keeping with the seconds between
+    /// frames example, the interval's unit would be seconds in this case and accrued_delta would be
+    /// seconds between frames; accrued_delta and delta have the same unit type.
     pub fn tick(&mut self, delta: P) {
 
         // PAUSE STATUS
@@ -1062,9 +1097,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.accrued_delta += delta;
 
         // TICK COLLECTION
-        // Acquiring the amount of tick fires that occurred within the given frame based on if
-        // the Ticker is set to handle frame spikes.
-        let ticks = match self.is_handling_frame_spikes {
+        // Acquiring the amount of tick fires that occurred within the time based on if
+        // the Ticker is set to handle time spikes.
+        let ticks = match self.is_handling_time_spikes {
 
             // TICK COLLECTION WHEN HANDLING FRAME SPIKES
             // When frame spike handling is active, all ticks that accumulated during a large
@@ -1082,8 +1117,8 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
                 tick_count_truncated_to_value_type
             },
 
-            // TICK COLLECTION WHEN ~NOT~ HANDLING FRAME SPIKES
-            // When frame spike handling is inactive, only one tick is allowed to fire per call
+            // TICK COLLECTION WHEN ~NOT~ HANDLING TIME SPIKES
+            // When time spike handling is inactive, only one tick is allowed to fire per call
             // regardless of how large the delta was.  One interval is subtracted from accrued_delta
             // rather than resetting to zero so that the timer remains accurate over time — any
             // leftover time beyond the single tick carries into the next frame naturally.
@@ -1100,6 +1135,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         // Will only ever tick fire if the accrued delta pushed ticks beyond the interval value.
         // This check ensures we aren't needlessly firing for every frame, rather we are firing
         // based on if we've passed over the interval threshold using our constant accrual.
+        //
+        // To be perfectly clear, ticks can only be greater than 0 if the accrued delta went past the
+        // interval value.  Greater than 0 means 1 or higher in this case, decimals in between 0 and 1
+        // don't count.
         if ticks > V::from_i32(0) {
 
             // TICK FIRE DIRECTION
