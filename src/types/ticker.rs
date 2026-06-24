@@ -152,7 +152,7 @@ pub struct Ticker<V: TickerValue, P: TickerPrecision> {
     is_paused:                  bool,
     is_looping:                 bool,
     is_ticking_up:              bool,
-    is_handling_time_spikes:    bool, // SHOULD THIS BE IS_HANDLING_DELTA_SPIKES?
+    is_handling_delta_spikes:   bool,
 }
 
 impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
@@ -167,7 +167,7 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up:              true,
-            is_handling_time_spikes:    true,
+            is_handling_delta_spikes:   true,
         }
     }
 }
@@ -187,7 +187,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_paused: bool,
         is_looping: bool,
         is_ticking_up: bool,
-        is_handling_time_spikes: bool,
+        is_handling_delta_spikes: bool,
     ) -> Self {
 
         let min = start_value.min(end_value);
@@ -207,7 +207,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused,
             is_looping,
             is_ticking_up,
-            is_handling_time_spikes,
+            is_handling_delta_spikes,
         }
     }
 
@@ -232,7 +232,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 false,
             is_ticking_up,
-            is_handling_time_spikes:    true,
+            is_handling_delta_spikes:   true,
         }
     }
 
@@ -257,7 +257,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 false,
             is_ticking_up,
-            is_handling_time_spikes:    false,
+            is_handling_delta_spikes:   false,
         }
     }
 
@@ -282,7 +282,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up,
-            is_handling_time_spikes:    true,
+            is_handling_delta_spikes:   true,
         }
     }
 
@@ -307,7 +307,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_looping:                 true,
             is_ticking_up,
-            is_handling_time_spikes:    false,
+            is_handling_delta_spikes:   false,
         }
     }
     // ######################################################################################## //
@@ -392,16 +392,22 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.is_looping
     }
 
-    /// Returns whether or not a Ticker is set to count its `current_value` up or down.
+    /// Returns whether or not a Ticker is set to tick its `current_value` up or down.
     #[inline]
     pub fn is_ticking_up(&self) -> bool {
         self.is_ticking_up
     }
 
-    /// Returns whether or not a Ticker is set to handle time spikes (delays) in its .tick() method.
+    /// Returns whether or not this Ticker can fire more than one tick in a single .tick() call.
+    ///
+    /// - `TRUE`: When a lot of time (or whatever unit delta in .tick() represents) has built up since the
+    /// last call, the Ticker will catch up all at once — firing every tick it's owed in one go.
+    ///
+    /// - `FALSE`: The Ticker only ever fires one tick per call, no matter how much has built up.
+    /// Anything extra is saved and carried over to the next call instead of being used right away.
     #[inline]
-    pub fn is_handling_time_spikes(&self) -> bool {
-        self.is_handling_time_spikes
+    pub fn is_handling_delta_spikes(&self) -> bool {
+        self.is_handling_delta_spikes
     }
     // ######################################################################################## //
 
@@ -488,14 +494,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
     ///
     #[inline]
-    pub fn start_handling_time_spikes(&mut self) {
-        self.is_handling_time_spikes = true;
+    pub fn start_handling_delta_spikes(&mut self) {
+        self.is_handling_delta_spikes = true;
     }
 
     ///
     #[inline]
-    pub fn stop_handling_time_spikes(&mut self) {
-        self.is_handling_time_spikes = false;
+    pub fn stop_handling_delta_spikes(&mut self) {
+        self.is_handling_delta_spikes = false;
     }
     // ######################################################################################## //
 
@@ -1060,10 +1066,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.accrued_delta = P::from_f64(0.0);
     }
 
-    /// #### Description
+    /// #### Description of Method
     /// Used to advance a Ticker by collecting a delta at any period of a user's choosing, *usually* on
-    /// an event that happens consistently.  A common delta to use with such a method would be the
-    /// difference in time between 2 frames.
+    /// an event that happens both consistently and constantly (such as frames rendering in real-time).
+    /// A common delta to use with such a method would be the difference in time between 2 frames.
     ///
     /// #### What Impacts Tick Calculation?
     /// The fields of a Ticker which impact the tick calculation inside this method are as follows:
@@ -1074,9 +1080,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// whatever boundary it hits or goes past.
     /// - `is_ticking_up` : If true, calculated ticks will increase current_value.  If false,
     /// ticks will decrease current_value.
-    /// - `is_handling_time_spikes` : If true, tick calculation will account for ticks generated during
-    /// time spikes (delta is part of the tick calculation).  If false, tick calculation will only
-    /// generate 1 tick for every .tick() call (delta is NOT part of the tick calculation).
+    /// - `is_handling_delta_spikes` : If true, tick calculation divides the full accrued_delta by
+    /// interval, so every tick that has accumulated gets added at once.  If false, accrued_delta is
+    /// still checked against interval, but at most 1 tick fires per call regardless of how much
+    /// has accumulated — any excess remains in accrued_delta for the next call.
     ///
     /// #### What is Delta's Unit?
     /// The unit of delta is based on what is passed into the tick method.  If the passed value is the difference in seconds between
@@ -1084,6 +1091,28 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// part - delta's unit determines accrued_delta's and interval's unit type.  Keeping with the seconds between
     /// frames example, the interval's unit would be seconds in this case and accrued_delta would be
     /// seconds between frames; accrued_delta and delta have the same unit type.
+    ///
+    /// #### What The Hell is a Tick?
+    /// It is a count of how many times the accrued_delta has gone over the interval's value.  As for an example,
+    /// consider the following factors first:
+    /// - `Delta Unit Type` : Clowns Seen Between Blinks
+    /// - `Interval Unit Type` : Clowns Seen
+    /// - `Interval Value` : 1.7
+    /// - `A .tick() call produced 4 ticks.`
+    /// - `At the end of the .tick() call, accrued_delta is 0.705882353.`
+    /// - `The ticker you're using to track all of this has is_handling_delta_spikes set to true.`
+    ///
+    /// Now, lets breakdown these factors through this step-by-step scenario:
+    /// 1. Imagine that you just saw 8 clowns between 2 blinks.
+    /// 2. Your accrued_delta in this case would be 8 clowns seen between 2 blinks.
+    ///     - The clowns seen is our time unit.  An equivalent to this would be seconds as a time unit within frames being rendered.
+    ///     - A blink is the event that tells us when to log things.  An equivalent to this would be a new frame being rendered acting as an event to log the amount of seconds it took to render.
+    /// 3. Your interval is set to 1.7, which will mean that we only add 1 to current_value after we've seen 1.7 clowns.
+    /// 4. Since is_handling_delta_spikes is set to true, we take our 8 clowns and divide that by our interval of 1.7.  4.705882353 is the result.
+    /// 5. current_value only works with integers due to how TickerValue is set up, so 4.705882353 gets truncated to 4 and the 0.705882353 will act as a remainder.
+    /// 6. The value of 4 is what our ticks are; I know, it's complicated and hurts the brain at first.
+    /// 7. The remainder of 0.705882353 gets assigned to accrued_delta so that the next .tick() call can account for how many clowns were carried over from the last blink period.
+    /// 8. The 4 is what gets added or subtracted from current_value depending on if is_ticking_up is set to true or false.
     pub fn tick(&mut self, delta: P) {
 
         // PAUSE STATUS
@@ -1099,9 +1128,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         // TICK COLLECTION
         // Acquiring the amount of tick fires that occurred within the time based on if
         // the Ticker is set to handle time spikes.
-        let ticks = match self.is_handling_time_spikes {
+        let ticks = match self.is_handling_delta_spikes {
 
-            // TICK COLLECTION WHEN HANDLING FRAME SPIKES
+            // TICK COLLECTION WHEN HANDLING TIME SPIKES
             // When frame spike handling is active, all ticks that accumulated during a large
             // delta are collected at once.  The remainder after division is kept in accrued_delta
             // so that partial progress toward the next tick is not lost between frames.
@@ -1118,10 +1147,18 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             },
 
             // TICK COLLECTION WHEN ~NOT~ HANDLING TIME SPIKES
-            // When time spike handling is inactive, only one tick is allowed to fire per call
+            // When time spike handling is inactive, only 1 tick is allowed to fire per call
             // regardless of how large the delta was.  One interval is subtracted from accrued_delta
             // rather than resetting to zero so that the timer remains accurate over time — any
-            // leftover time beyond the single tick carries into the next frame naturally.
+            // leftover time beyond the single tick carries into the next .tick() call.
+            //
+            // We subtract by interval (rather than just discarding accrued_delta) specifically because
+            // is_handling_delta_spikes can be toggled at runtime.  If this flag is permanently false for
+            // a given Ticker, the leftover precision wouldn't matter — each call only ever checks "has
+            // one interval passed, yes or no" regardless of how much excess sits in accrued_delta.  But
+            // since the flag can flip to true later, preserving the leftover ensures that switch correctly
+            // picks up every tick that was quietly accumulating while spike handling was off, rather than
+            // discarding that history the moment multi-tick firing gets re-enabled.
             false => match self.accrued_delta >= self.interval {
                 true => {
                     self.accrued_delta -= self.interval;
