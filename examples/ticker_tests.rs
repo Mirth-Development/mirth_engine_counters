@@ -25,7 +25,7 @@ fn main() {
         // Comment this add_system line to prevent the variant tickers from spawning.
         .add_systems(Startup, spawn_ticker_variants)
 
-        // Don't touch this unless you want the tickers to not print their information out.
+        // Don't touch this unless you want the tickers to NOT print their information.
         .add_systems(Update, print_ticker_information)
         .run();
 }

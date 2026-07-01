@@ -5,9 +5,10 @@ use half::f16;
 use crate::types::*;
 use crate::systems::*;
 
-/// A structure that acts as the main plugin for all the types and systems of the mirth_engine_tickers package.
-/// Will enable types and systems within the package depending on which features have been enabled
-/// using the "cargo --features" command.
+/// A structure that acts as the main plugin for all the reflections and systems of the mirth_engine_tickers package.
+///
+/// Will enable said reflections and systems depending on which features have been activated
+/// using the "cargo --features" command.  By default, reflections and systems are turned on.
 pub struct Tickers {}
 impl Plugin for Tickers {
     fn build(&self, app: &mut App) {

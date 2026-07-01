@@ -86,7 +86,7 @@ impl TickerValue for i32 {
 ///
 /// #### Why Add Precision?
 /// f16, f32, and f64 types for precision determine how accurate the calculations inside the .tick() method are.
-/// f16 being the least accurate, f32 being the middleground, and f64 being the most accurate. Precision
+/// f16 being the least accurate, f32 being the middle ground, and f64 being the most accurate. Precision
 /// control is useful if your aim is to save memory (especially if thousands of tickers are active).
 /// - `Recommendation for f16 Usage` : 2 Floating Digits Matter
 /// - `Recommendation for f32 Usage` : 5 Floating Digits Matter

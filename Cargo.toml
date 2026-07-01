@@ -6,6 +6,8 @@ edition = "2024"
 description = "A Bevy plugin with types (and their systems) purposed for tracking continously changing values over a given period of time."
 license = "MIT OR Apache-2.0"
 
+
+
 [dependencies]
 # Required Dependencies
 bevy_app = { version = "0.19.0", default-features = false }
@@ -34,7 +36,7 @@ testing_tools = ["mirth_engine_testing_tools"]
 
 ########################### TICKER FEATURES ###############################
 
-# Enable this to make all Ticker types reflectable.
+# Enable this to make all Ticker types reflectable in the Tickers plugin.
 # Enabling this will add the bevy_reflect dependency.
 ticker_reflect = ["bevy_reflect", "bevy_app/bevy_reflect"]
 
@@ -43,7 +45,8 @@ ticker_reflect = ["bevy_reflect", "bevy_app/bevy_reflect"]
 # serialization to work properly.
 ticker_serialize = ["serde", "ticker_reflect"]
 
-# Enable this if you don't plan on making custom Ticker systems.
+# Enable this to activate all Ticker systems inside the Tickers plugin; best to use when you don't plan on making custom Ticker systems.
+#
 # Enabling this will add the bevy_time dependency and every Ticker type will have its own system running each frame.
 # And yes, this does mean that if you don't use all the Ticker types then this will create for some inefficiency
 # and some little overhead.  But the overhead is rather small and the inefficiency is only present if you don't make
