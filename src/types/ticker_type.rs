@@ -6,14 +6,14 @@ use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
 
-/// Used to apply a generic to the `start_value`, `current_value`, and `end_value` within the ticker type.
+/// Used to apply a generic to the `start_value`, `current_value`, and `end_value` within the ticker struct.
 ///
 /// Supports i8, i16, i32 for `start_value`, `current_value`, and `end_value` within Ticker.
 ///
 /// #### Why Add 1 to MIN?
 /// The MIN addition is present to help avoid absolute errors on integer ranges.  MIN's
 /// assignment on value types will always add 1 to an integer's minimum to avoid things like -128 in
-/// the i8 datatype becoming 128 after .absolute() is applied to a value.  We have to do this since
+/// the i8 primitive becoming 128 after .absolute() is applied to a value.  We have to do this since
 /// 128 is outside the i8 range; 127 is the max for i8.
 pub trait TickerValue:
 Copy                    // TickerValue types are integers, which means they're safe to copy.
@@ -80,7 +80,7 @@ impl TickerValue for i32 {
 
 
 
-/// Used to apply a generic to the `stored_time` and `time_interval` fields within the ticker type.
+/// Used to apply a generic to the `stored_time` and `time_interval` fields within the ticker struct.
 ///
 /// Supports f16, f32, and f64 for `stored_time` and `time_interval` fields within Ticker.
 ///
@@ -144,7 +144,7 @@ impl TickerPrecision for f64 {
 
 
 
-/// A trait for handling conversions into the ticker's precision type `P`.
+/// Used to handle conversions into the ticker's precision type `P`.
 ///
 /// #### Why Is This Trait Necessary?
 /// Primarily purposed to ease Ticker construction by allowing any float literal to be used as input
@@ -196,7 +196,8 @@ impl TickerFloatBridge<f64> for f16 {
 
 
 
-/// Provides tickers with a variety of different behaviors.  Here is each behavior explained:
+/// Defines the set of possible behaviors a Ticker can be assigned, controlling both whether the
+/// ticker is mutable and what happens to current_value once it reaches a boundary.
 ///
 /// - **`Looper`**
 ///     - The ticker is **immutable** and will loop when current_value hits either start_value or end_value.  When a loop triggers, current_value is reset back to start_value.
@@ -231,10 +232,9 @@ pub enum TickerBehaviors {
 }
 
 
-
-/// #### What Is A Ticker?
-/// In short, a ticker is a type used to track the time between events.
+/// In short, a ticker is a struct used to track the time between events.
 ///
+/// #### What Is A Ticker?
 /// In long, a ticker is a self-contained counter that advances a value (current_value) between two boundaries
 /// (start_value and end_value) at a fixed rate, driven by however much time passes between
 /// calls to .tick(). Depending on its behavior, a Ticker can loop back to start_value when
@@ -388,8 +388,8 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
 
     /// Creates a MutLooper ticker that has the following properties:
     /// - start_value is set to 0.
-    /// - Ticks `current_value` from 0 to the ticker's max integer value ([`V::MAX`]).
-    /// - end_value is set to the ticker's max integer value ([`V::MAX`]).
+    /// - Ticks `current_value` from 0 to the ticker's max integer value (`V::MAX`).
+    /// - end_value is set to the ticker's max integer value (`V::MAX`).
     /// - time interval is set to 1.0.
     /// - Begins unpaused.
     /// - Will tick up.
@@ -425,16 +425,16 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehaviors::MutLooper);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new<T>(
+    pub fn new<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_paused:                  bool,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
         behavior:                   TickerBehaviors,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -475,12 +475,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// assert!(ticker.is_ticking_up());
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
-    pub fn new_looper<T>(
+    pub fn new_looper<F>(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -512,14 +512,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_looper_custom(0, 25, 100, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
-    pub fn new_looper_custom<T>(
+    pub fn new_looper_custom<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -560,12 +560,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// assert!(ticker.is_ticking_down());
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new_mut_looper<T>(
+    pub fn new_mut_looper<F>(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -597,14 +597,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 50, 100, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new_mut_looper_custom<T>(
+    pub fn new_mut_looper_custom<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -645,12 +645,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_oneshot(0, 10, 1.0, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
-    pub fn new_oneshot<T>(
+    pub fn new_oneshot<F>(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -683,14 +683,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_oneshot_custom(0, 5, 10, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
-    pub fn new_oneshot_custom<T>(
+    pub fn new_oneshot_custom<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -731,12 +731,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot(0, 100, 2.0, false);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
-    pub fn new_mut_oneshot<T>(
+    pub fn new_mut_oneshot<F>(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -769,14 +769,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot_custom(10, 20, 30, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
-    pub fn new_mut_oneshot_custom<T>(
+    pub fn new_mut_oneshot_custom<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -817,12 +817,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_freezing(0, 100, 1.0, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
-    pub fn new_freezing<T>(
+    pub fn new_freezing<F>(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -855,14 +855,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_freezing_custom(0, 0, 10, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
-    pub fn new_freezing_custom<T>(
+    pub fn new_freezing_custom<F>(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              T,
+        time_interval:              F,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where T: TickerFloatBridge<P> {
+    ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -980,7 +980,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// The time_interval is what dictates how long in \[INSERT_TIME_UNIT_HERE\] that it takes for
     /// current_value to increase or decrease by 1; direction depends on `is_ticking_up`.
     ///
-    /// #### Unit Type of time_interval?
+    /// #### Unit of time_interval?
     /// ticker has no built-in concept of "seconds" or any other unit — time_interval and stored_time
     /// are just two numbers compared against each other inside the .tick() method. The unit they represent is
     /// determined entirely by whatever unit they pass into the .tick() method.
@@ -1006,7 +1006,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// custom structures that need to inspect or manually carry over a Ticker's in-progress
     /// timing state.
     ///
-    /// #### Unit Type of stored_time?
+    /// #### Unit of stored_time?
     /// ticker has no built-in concept of "seconds" or any other unit — time_interval and stored_time
     /// are just two numbers compared against each other inside the .tick() method. The unit they represent is
     /// determined entirely by whatever unit they pass into the .tick() method.
@@ -1087,7 +1087,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.is_handling_time_spikes
     }
 
-    /// Returns the behavior type of the ticker.
+    /// Returns the TickerBehaviors type of the ticker.
     ///
     /// #### Example
     /// ```
@@ -2263,7 +2263,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
-    /// Will print out all the field values within a ticker.
+    /// Will print out all the fields and their values of a ticker.
     pub fn print_information(&self) {
         println!("START_VALUE: {}", self.start_value);
         println!("CURRENT_VALUE: {}", self.current_value);
@@ -2285,7 +2285,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 /// Accepts any type that implements [`PartialOrd`] and [`Display`], meaning
 /// all numeric primitives, [`char`], [`String`], and [`&str`] are valid inputs.
 ///
-/// #### Panics
+/// #### Can This Panic?
 /// Panics if the value is outside the provided range.
 ///
 /// #### Example
