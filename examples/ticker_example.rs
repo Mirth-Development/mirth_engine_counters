@@ -41,7 +41,7 @@ fn spawn_custom_ticker(mut commands: Commands) {
         true,
         true,
         true,
-        TickerBehaviors::MutLooper,
+        TickerBehavior::MutLooper,
     ));
 }
 
