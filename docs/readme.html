@@ -2,9 +2,9 @@
 <html lang="en">
 
     <head>
-      <meta charset="UTF-8">
-      <title>Tickers</title>
-      <link rel="stylesheet" href="readme.css">
+        <meta charset="UTF-8">
+        <title>README for Tickers</title>
+        <link rel="stylesheet" href="readme.css">
     </head>
 
 
@@ -12,725 +12,913 @@
     <body>
 
         <!-- ============================================================ -->
-        <!-- INTRODUCTION                                                 -->
+        <!-- NAVIGATION                                                   -->
         <!-- ============================================================ -->
-        <p id="title">TICKERS</p>
-        <p>Text</p>
-        <p>Text</p>
-        <p>Text</p>
-
         <!-- ============================================================ -->
-        <!-- HOW TO USE THE PACKAGE                                       -->
+        <!-- NAVIGATION                                                   -->
         <!-- ============================================================ -->
-        <div class="block_1">
-          <h1>How To Use The Package?</h1>
+        <nav id="navigation">
+            <h1 id="navigation_title">Table of Contents</h1>
 
-          <!-- The Recommended Way -->
-          <div class="block_2">
-              <h2>The Recommended Way</h2>
-              <ol>
-                  <li>Add the package to your Rust project.
-                    <pre><code>cargo add mirth_engine_tickers</code></pre>
-                  </li>
-                  <li>Add <code>.add_plugin(Tickers{})</code> to your Bevy app.</li>
-                  <li>You can now make use of the datatypes that this package offers.</li>
-              </ol>
-          </div>
-
-          <!-- The "I Choose Features" Way -->
-          <div class="block_2">
-              <h2>The "I Choose Features" Way</h2>
-              <ol>
-                  <li>Add the package to your project with the default features disabled, then explicitly choose which features you want.
-                      <ul>
-                          <li><code class="list_header">ticker_reflect</code> : Will cause all ticker types to reflect. Will add the bevy_reflect dependency and allow for the Tickers plugin to be usable.</li>
-                          <li><code class="list_header">ticker_systems</code> : Will turn on all systems for every ticker type. Will add the bevy_time dependency and allow for the Tickers plugin to be usable.</li>
-                          <li>
-                              <code class="list_header">ticker_serialize</code> : Will make it so that ticker types can be serialized and deserialized. Will enable ticker_reflect, add the serde dependency, and allow for the Tickers plugin to be usable.
-                              <pre><code>cargo add mirth_engine_tickers --no-default-features --features ticker_reflect, ticker_systems, ticker_serialize</code></pre>
-                          </li>
-                      </ul>
-                  </li>
-                  <li>If you added any of the features, add <code>.add_plugin(Tickers{})</code> to your Bevy app.</li>
-                  <li>You can now make use of the datatypes that this package offers.</li>
-              </ol>
-          </div>
-
-          <!-- The "I'll Do Everything Myself" Way -->
-          <div class="block_2">
-              <h2>The "I'll Do Everything Myself" Way</h2>
-              <ol>
-                  <li>Add the package to your project with the default features disabled.
-                      <pre><code>cargo add mirth_engine_tickers --no-default-features</code></pre>
-                  </li>
-                  <li>You can now make use of the datatypes that this package offers, but you will need to create ticking systems, reflection registrations, and serialization capability yourself.</li>
-              </ol>
-          </div>
-
-        </div>
-
-        <!-- ============================================================ -->
-        <!-- WHAT ARE THE DATATYPES THIS PACKAGE OFFERS?                  -->
-        <!-- ============================================================ -->
-        <div class="block_1">
-            <h1>What Are The Datatypes This Package Offers?</h1>
-
-            <!-- Tickers Plugin -->
-            <div class="block_2">
-                <h2>TickersPlugin</h2>
-                <p>A struct acting as a Bevy plugin used to enable ticker systems and reflections for ticker types.  Use <code>.add_plugin(Tickers{})</code> inside a Bevy app if you wish to make use of said systems and reflections.</p>
+            <!-- ToC : How To Use The Package-->
+            <div class="nav_box_1">
+                <a href="#how-to-use-the-package">How To Use The Package?</a>
+                <div class="nav_box_2"><a href="#the-recommended-way">The Recommended Way</a></div>
+                <div class="nav_box_2"><a href="#the-i-choose-features-way">The "I Choose Features" Way</a></div>
+                <div class="nav_box_2"><a href="#the-i-ll-do-everything-myself-way">The "I'll Do Everything Myself" Way</a></div>
             </div>
 
-            <!-- Ticker Struct -->
-            <div class="block_2">
-                <h2>Ticker</h2>
-                <p>A struct used to track the time between events.  Uses the types TickerValue, TickerPrecision, TickerFloatBridge, and TickerBehavior to support itself.</p>
-                <p>Holds the following fields:</p>
-                <ul>
-                    <li><code>start_value</code></li>
-                    <li><code>current_value</code></li>
-                    <li><code>end_value</code></li>
-                    <li><code>time_interval</code></li>
-                    <li><code>is_paused</code></li>
-                    <li><code>is_ticking_up</code></li>
-                    <li><code>is_handling_time_spikes</code></li>
-                    <li><code>behavior</code></li>
-                </ul>
+            <!-- ToC : What Are The Datatypes This Package Offers? -->
+            <div class="nav_box_1">
+                <a href="#what-are-the-datatypes-this-package-offers">What Are The Datatypes This Package Offers?</a>
 
-
-                <!-- Ticker Traits -->
-                <div class="block_3">
-                    <h3>Ticker Traits</h3>
-
-                    <!-- TickerValue -->
-                    <div class="block_4">
-                        <h4>TickerValue</h4>
-                        <p>A trait for implementing the <code>V</code> generic to define integer primitives a <code>Ticker</code>can store for its <code>start_value</code>, <code>end_value</code>, and <code>current_value</code>.</p>
-                        <ul><li><code>V</code> supports i8, i16, and i32.</li></ul>
-                    </div>
-
-                    <!-- TickerPrecision -->
-                    <div class="block_4">
-                        <h4>TickerPrecision</h4>
-                        <p>A trait for implementing the <code>P</code> generic to define float types a <code>Ticker</code> can use for its precision in tracking time, <code>P</code> impacts the <code>time_interval</code> and <code>stored_time</code> fields.</p>
-                        <ul><li><code>P</code> supports f16 (stable from half crate), f32, and f64.</li></ul>
-                    </div>
-
-                    <!-- TickerFloatBridge -->
-                    <div class="block_4">
-                        <h4>TickerFloatBridge</h4>
-                        <p>A trait for implementing the <code>F</code> generic which grants the ability for f16, f32, and f64 to be passed in for the float fields of a <code>Ticker</code> constructor, no matter the precision a ticker is set to.</p>
-                        <ul><li><code>F</code> supports f16 (stable from half crate), f32, and f64.</li></ul>
-                    </div>
-
+                <!-- ToC : TickersPlugin -->
+                <div class="nav_box_2">
+                    <a href="#tickersplugin">TickersPlugin</a>
                 </div>
 
+                <!-- ToC : Ticker -->
+                <div class="nav_box_2">
+                    <a href="#ticker">Ticker</a>
 
-                <!-- Ticker Enums -->
-                <div class="block_3">
-                    <h3>Ticker Enums</h3>
-
-                    <!-- TickerBehavior -->
-                    <div class="block_4">
-                        <h4>TickerBehavior</h4>
-                        <p>An enum that establishes the different types of behavior a <code>Ticker</code> can use.  Classifications of behavior are as follows:</p>
-                        <ul>
-
-                            <!-- Looper Behavior -->
-                            <li>
-                                <code>Looper</code>
-                                <ul>
-                                    <li>The ticker is <u>immutable</u> and will loop when <code>current_value</code> hits either <code>start_value</code> or <code>end_value</code>.  When a loop triggers, <code>current_value</code> is reset back to <code>start_value</code>.</li>
-                                </ul>
-                            </li>
-
-                            <!-- MutLooper Behavior -->
-                            <li>
-                                <code>MutLooper</code>
-                                <ul>
-                                    <li>The ticker is <u>mutable</u> and will loop when <code>current_value</code> hits either <code>start_value</code> or <code>end_value</code>.  When a loop triggers, <code>current_value</code> is reset back to <code>start_value</code>.</li>
-                                </ul>
-                            </li>
-
-                            <!-- Oneshot Behavior -->
-                            <li>
-                                <code>Oneshot</code>
-                                <ul>
-                                    <li>The ticker is <u>immutable</u> and will assign <code>current_value</code> to a boundary's value if <code>current_value</code> were to hit <code>start_value</code> or <code>end_value</code>; start and end values are the boundaries.</li>
-                                    <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
-                                </ul>
-                            </li>
-
-                            <!-- MutOneshot Behavior -->
-                            <li>
-                                <code>MutOneshot</code>
-                                <ul>
-                                    <li>The ticker is <u>mutable</u> and will assign <code>current_value</code> to a boundary's value if <code>current_value</code> were to hit <code>start_value</code> or <code>end_value</code>; start and end values are the boundaries.</li>
-                                    <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
-                                </ul>
-                            </li>
-
-                            <!-- Freezing Behavior -->
-                            <li>
-                                <code>Freezing</code>
-                                <ul>
-                                    <li>The ticker begins <u>mutable</u>, but it will become <u>immutable</u> once <code>current_value</code> hits </code>end_value</code>.</li>
-                                    <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
-                                </ul>
-                            </li>
-                        </ul>
+                    <!-- ToC : Ticker Traits -->
+                    <div class="nav_box_3">
+                        <a href="#ticker-traits">Ticker Traits</a>
+                        <div class="nav_box_4"><a href="#tickervalue">TickerValue</a></div>
+                        <div class="nav_box_4"><a href="#tickerprecision">TickerPrecision</a></div>
+                        <div class="nav_box_4"><a href="#tickerfloatbridge">TickerFloatBridge</a></div>
                     </div>
-                </div>
 
+                    <!-- ToC : Ticker Enums -->
+                    <div class="nav_box_3">
+                        <a href="#ticker-enums">Ticker Enums</a>
+                        <div class="nav_box_4"><a href="#tickerbehavior">TickerBehavior</a></div>
+                    </div>
 
-                <!-- Ticker Methods -->
-                <div class="block_3">
-                    <h3>Ticker Methods</h3>
+                    <!-- ToC : Ticker Methods -->
+                    <div class="nav_box_3">
+                        <a href="#ticker-methods">Ticker Methods</a>
 
-                    <!-- Tick Method -->
-                    <div class="block_4">
-                        <h4>The Most Important Method</h4>
-                        <div class="block_5">
-                            <h5>.tick(P)</h5>
-                            <p>Advances a ticker by taking in a passing of time between 2 events, <i>usually</i> for events that happen both consistently and constantly (such as when frames render); it does have the ability to take in <b>any</b> delta time.</p>
-                            <p>If you're wondering what exactly ticking does, here is the simplified version (the specifics can be found in the doc comments):</p>
-                            <ol>
-                                <li>Increase <code>stored_time</code> by the value passed to the <code>.tick()</code> call (elapsed_time_between_events).</li>
-                                <li>If <code>stored_time</code> is greater than or equal to the <code>time_interval</code>, change <code>current_value</code>.</li>
-                                <li>Reassign <code>stored_time</code> to the result of <code>stored_time %= time_interval</code>.  We do this to carry over our remainder to keep the state of time accurate to the events that are being tracked.</li>
-                            </ol>
+                        <!-- ToC : Ticker Tick Method -->
+                        <div class="nav_box_4">
+                            <a href="#the-most-important-method">The Most Important Method</a>
+                            <div class="nav_box_5"><a href="#tick-p">.tick(P)</a></div>
                         </div>
+
+                        <!-- ToC : Ticker Constructor Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-constructor-methods">Ticker Constructor Methods</a>
+                            <div class="nav_box_5"><a href="#default">default()</a></div>
+                            <div class="nav_box_5"><a href="#new-v-v-v-f-bool-bool-bool-tickerbehavior">new(V, V, V, F, bool, bool, bool, TickerBehavior)</a></div>
+                            <div class="nav_box_5"><a href="#new-looper-v-v-f-bool">new_looper(V, V, F, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-looper-custom-v-v-v-f-bool-bool">new_looper_custom(V, V, V, F, bool, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-mut-looper-v-v-f-bool">new_mut_looper(V, V, F, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-mut-looper-custom-v-v-v-f-bool-bool">new_mut_looper_custom(V, V, V, F, bool, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-oneshot-v-v-f-bool">new_oneshot(V, V, F, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-oneshot-custom-v-v-v-f-bool-bool">new_oneshot_custom(V, V, V, F, bool, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-mut-oneshot-v-v-f-bool">new_mut_oneshot(V, V, F, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-mut-oneshot-custom-v-v-v-f-bool-bool">new_mut_oneshot_custom(V, V, V, F, bool, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-freezing-v-v-f-bool">new_freezing(V, V, F, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-freezing-custom-v-v-v-f-bool-bool">new_freezing_custom(V, V, V, F, bool, bool)</a></div>
+                            <div class="nav_box_5"><a href="#new-copy-ticker">new_copy(Ticker)</a></div>
+                            <div class="nav_box_5"><a href="#new-copy-with-behavior-change-ticker-tickerbehavior">new_copy_with_behavior_change(Ticker, TickerBehavior)</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Getter Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-getter-methods">Ticker Getter Methods</a>
+                            <div class="nav_box_5"><a href="#start-value">.start_value()</a></div>
+                            <div class="nav_box_5"><a href="#current-value">.current_value()</a></div>
+                            <div class="nav_box_5"><a href="#end-value">.end_value()</a></div>
+                            <div class="nav_box_5"><a href="#time-interval">.time_interval()</a></div>
+                            <div class="nav_box_5"><a href="#stored-time">.stored_time()</a></div>
+                            <div class="nav_box_5"><a href="#is-paused">.is_paused()</a></div>
+                            <div class="nav_box_5"><a href="#is-unpaused">.is_unpaused()</a></div>
+                            <div class="nav_box_5"><a href="#is-ticking-up">.is_ticking_up()</a></div>
+                            <div class="nav_box_5"><a href="#is-ticking-down">.is_ticking_down()</a></div>
+                            <div class="nav_box_5"><a href="#is-handling-time-spikes">.is_handling_time_spikes()</a></div>
+                            <div class="nav_box_5"><a href="#behavior">.behavior()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Setter Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-setter-methods">Ticker Setter Methods</a>
+                            <div class="nav_box_5"><a href="#set-start-value-v">.set_start_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#set-current-value-v">.set_current_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#set-end-value-v">.set_end_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#pause">.pause()</a></div>
+                            <div class="nav_box_5"><a href="#unpause">.unpause()</a></div>
+                            <div class="nav_box_5"><a href="#tick-up">.tick_up()</a></div>
+                            <div class="nav_box_5"><a href="#tick-down">.tick_down()</a></div>
+                            <div class="nav_box_5"><a href="#start-handling-time-spikes">.start_handling_time_spikes()</a></div>
+                            <div class="nav_box_5"><a href="#stop-handling-time-spikes">.stop_handling_time_spikes()</a></div>
+                            <div class="nav_box_5"><a href="#set-behavior-tickerbehavior">.set_behavior(TickerBehavior)</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Equality Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-equality-methods">Ticker Equality Methods</a>
+                            <div class="nav_box_5"><a href="#is-current-at-start">.is_current_at_start()</a></div>
+                            <div class="nav_box_5"><a href="#is-current-at-end">.is_current_at_end()</a></div>
+                            <div class="nav_box_5"><a href="#is-start-at-end">.is_start_at_end()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Difference Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-difference-methods">Ticker Difference Methods</a>
+                            <div class="nav_box_5"><a href="#difference-from-start">.difference_from_start()</a></div>
+                            <div class="nav_box_5"><a href="#difference-from-end">.difference_from_end()</a></div>
+                            <div class="nav_box_5"><a href="#difference-from-start-to-end">.difference_from_start_to_end()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Digit Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-digit-methods">Ticker Digit Methods</a>
+                            <div class="nav_box_5"><a href="#digit-1">.digit_1()</a></div>
+                            <div class="nav_box_5"><a href="#digit-2">.digit_2()</a></div>
+                            <div class="nav_box_5"><a href="#digit-3">.digit_3()</a></div>
+                            <div class="nav_box_5"><a href="#digit-4">.digit_4()</a></div>
+                            <div class="nav_box_5"><a href="#digit-5">.digit_5()</a></div>
+                            <div class="nav_box_5"><a href="#digit-6">.digit_6()</a></div>
+                            <div class="nav_box_5"><a href="#digit-7">.digit_7()</a></div>
+                            <div class="nav_box_5"><a href="#digit-8">.digit_8()</a></div>
+                            <div class="nav_box_5"><a href="#digit-9">.digit_9()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Digit-Drop Accounting Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-digit-drop-accounting-methods">Ticker Digit-Drop Accounting Methods</a>
+                            <div class="nav_box_5"><a href="#digit-2-with-dda">.digit_2_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-3-with-dda">.digit_3_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-4-with-dda">.digit_4_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-5-with-dda">.digit_5_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-6-with-dda">.digit_6_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-7-with-dda">.digit_7_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-8-with-dda">.digit_8_with_dda()</a></div>
+                            <div class="nav_box_5"><a href="#digit-9-with-dda">.digit_9_with_dda()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Add Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-add-methods">Ticker Add Methods</a>
+                            <div class="nav_box_5"><a href="#add-to-start-value-v">.add_to_start_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#add-to-current-value-v">.add_to_current_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#add-to-end-value-v">.add_to_end_value(V)</a></div>
+                            <div class="nav_box_5"><a href="#add-to-time-interval-p">.add_to_time_interval(P)</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Percentage Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-percentage-methods">Ticker Percentage Methods</a>
+                            <div class="nav_box_5"><a href="#percentage-completed">.percentage_completed()</a></div>
+                            <div class="nav_box_5"><a href="#percentage-remaining">.percentage_remaining()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Reset Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-reset-methods">Ticker Reset Methods</a>
+                            <div class="nav_box_5"><a href="#soft-reset">.soft_reset()</a></div>
+                            <div class="nav_box_5"><a href="#hard-reset">.hard_reset()</a></div>
+                        </div>
+
+                        <!-- ToC : Ticker Helper Methods -->
+                        <div class="nav_box_4">
+                            <a href="#ticker-helper-methods">Ticker Helper Methods</a>
+                            <div class="nav_box_5"><a href="#is-mutable">.is_mutable()</a></div>
+                            <div class="nav_box_5"><a href="#print-information">.print_information()</a></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+
+
+        <div id="page_content">
+
+            <!-- ============================================================ -->
+            <!-- INTRODUCTION                                                 -->
+            <!-- ============================================================ -->
+            <p id="title">TICKERS</p>
+            <p>Text</p>
+            <p>Text</p>
+            <p>Text</p>
+
+            <!-- ============================================================ -->
+            <!-- HOW TO USE THE PACKAGE                                       -->
+            <!-- ============================================================ -->
+            <div class="block_1">
+                <h1 id="how-to-use-the-package">How To Use The Package?</h1>
+
+                <!-- The Recommended Way -->
+                <div class="block_2">
+                    <h2 id="the-recommended-way">The Recommended Way</h2>
+                    <ol>
+                        <li>Add the package to your Rust project.
+                            <pre><code>cargo add mirth_engine_tickers</code></pre>
+                        </li>
+                        <li>Add <code>.add_plugin(Tickers{})</code> to your Bevy app.</li>
+                        <li>You can now make use of the datatypes that this package offers.</li>
+                    </ol>
+                </div>
+
+                <!-- The "I Choose Features" Way -->
+                <div class="block_2">
+                    <h2 id="the-i-choose-features-way">The "I Choose Features" Way</h2>
+                    <ol>
+                        <li>Add the package to your project with the default features disabled, then explicitly choose which features you want.
+                            <ul>
+                                <li><code class="list_header">ticker_reflect</code> : Will cause all ticker types to reflect. Will add the bevy_reflect dependency and allow for the Tickers plugin to be usable.</li>
+                                <li><code class="list_header">ticker_systems</code> : Will turn on all systems for every ticker type. Will add the bevy_time dependency and allow for the Tickers plugin to be usable.</li>
+                                <li>
+                                    <code class="list_header">ticker_serialize</code> : Will make it so that ticker types can be serialized and deserialized. Will enable ticker_reflect, add the serde dependency, and allow for the Tickers plugin to be usable.
+                                    <pre><code>cargo add mirth_engine_tickers --no-default-features --features ticker_reflect, ticker_systems, ticker_serialize</code></pre>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>If you added any of the features, add <code>.add_plugin(Tickers{})</code> to your Bevy app.</li>
+                        <li>You can now make use of the datatypes that this package offers.</li>
+                    </ol>
+                </div>
+
+                <!-- The "I'll Do Everything Myself" Way -->
+                <div class="block_2">
+                    <h2 id="the-i-ll-do-everything-myself-way">The "I'll Do Everything Myself" Way</h2>
+                    <ol>
+                        <li>Add the package to your project with the default features disabled.
+                            <pre><code>cargo add mirth_engine_tickers --no-default-features</code></pre>
+                        </li>
+                        <li>You can now make use of the datatypes that this package offers, but you will need to create ticking systems, reflection registrations, and serialization capability yourself.</li>
+                    </ol>
+                </div>
+
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- WHAT ARE THE DATATYPES THIS PACKAGE OFFERS?                  -->
+            <!-- ============================================================ -->
+            <div class="block_1">
+                <h1 id="what-are-the-datatypes-this-package-offers">What Are The Datatypes This Package Offers?</h1>
+
+                <!-- Tickers Plugin -->
+                <div class="block_2">
+                    <h2 id="tickersplugin">TickersPlugin</h2>
+                    <p>A struct acting as a Bevy plugin used to enable ticker systems and reflections for ticker types.  Use <code>.add_plugin(Tickers{})</code> inside a Bevy app if you wish to make use of said systems and reflections.</p>
+                </div>
+
+                <!-- Ticker Struct -->
+                <div class="block_2">
+                    <h2 id="ticker">Ticker</h2>
+                    <p>A struct used to track the time between events.  Uses the types TickerValue, TickerPrecision, TickerFloatBridge, and TickerBehavior to support itself.</p>
+                    <p>Holds the following fields:</p>
+                    <ul>
+                        <li><code>start_value</code></li>
+                        <li><code>current_value</code></li>
+                        <li><code>end_value</code></li>
+                        <li><code>time_interval</code></li>
+                        <li><code>is_paused</code></li>
+                        <li><code>is_ticking_up</code></li>
+                        <li><code>is_handling_time_spikes</code></li>
+                        <li><code>behavior</code></li>
+                    </ul>
+
+
+                    <!-- Ticker Traits -->
+                    <div class="block_3">
+                        <h3 id="ticker-traits">Ticker Traits</h3>
+
+                        <!-- TickerValue -->
+                        <div class="block_4">
+                            <h4 id="tickervalue">TickerValue</h4>
+                            <p>A trait for implementing the <code>V</code> generic to define integer primitives a <code>Ticker</code>can store for its <code>start_value</code>, <code>end_value</code>, and <code>current_value</code>.</p>
+                            <ul><li><code>V</code> supports i8, i16, and i32.</li></ul>
+                        </div>
+
+                        <!-- TickerPrecision -->
+                        <div class="block_4">
+                            <h4 id="tickerprecision">TickerPrecision</h4>
+                            <p>A trait for implementing the <code>P</code> generic to define float types a <code>Ticker</code> can use for its precision in tracking time, <code>P</code> impacts the <code>time_interval</code> and <code>stored_time</code> fields.</p>
+                            <ul><li><code>P</code> supports f16 (stable from half crate), f32, and f64.</li></ul>
+                        </div>
+
+                        <!-- TickerFloatBridge -->
+                        <div class="block_4">
+                            <h4 id="tickerfloatbridge">TickerFloatBridge</h4>
+                            <p>A trait for implementing the <code>F</code> generic which grants the ability for f16, f32, and f64 to be passed in for the float fields of a <code>Ticker</code> constructor, no matter the precision a ticker is set to.</p>
+                            <ul><li><code>F</code> supports f16 (stable from half crate), f32, and f64.</li></ul>
+                        </div>
+
                     </div>
 
-                    <!-- Constructor Methods -->
-                    <div class="block_4">
-                        <h4>Constructor Methods</h4>
 
-                        <!-- default -->
-                        <div class="block_5">
-                            <h5>default()</h5>
-                            <p>Creates a <code>MutLooper</code> that has the following properties:</p>
+                    <!-- Ticker Enums -->
+                    <div class="block_3">
+                        <h3 id="ticker-enums">Ticker Enums</h3>
+
+                        <!-- TickerBehavior -->
+                        <div class="block_4">
+                            <h4 id="tickerbehavior">TickerBehavior</h4>
+                            <p>An enum that establishes the different types of behavior a <code>Ticker</code> can use.  Classifications of behavior are as follows:</p>
                             <ul>
-                                <li><code>start_value</code> is set to 0.</li>
-                                <li>Ticks <code>current_value</code> from 0 to the ticker's max integer value (<code>V::MAX</code>).</li>
-                                <li><code>end_value</code> is set to the ticker's max integer value (<code>V::MAX</code>).</li>
-                                <li><code>time_interval</code> is set to 1.0.</li>
-                                <li>Begins unpaused.</li>
-                                <li>Will tick up.</li>
-                                <li>Will handle time spikes.</li>
+
+                                <!-- Looper Behavior -->
+                                <li>
+                                    <code>Looper</code>
+                                    <ul>
+                                        <li>The ticker is <u>immutable</u> and will loop when <code>current_value</code> hits either <code>start_value</code> or <code>end_value</code>.  When a loop triggers, <code>current_value</code> is reset back to <code>start_value</code>.</li>
+                                    </ul>
+                                </li>
+
+                                <!-- MutLooper Behavior -->
+                                <li>
+                                    <code>MutLooper</code>
+                                    <ul>
+                                        <li>The ticker is <u>mutable</u> and will loop when <code>current_value</code> hits either <code>start_value</code> or <code>end_value</code>.  When a loop triggers, <code>current_value</code> is reset back to <code>start_value</code>.</li>
+                                    </ul>
+                                </li>
+
+                                <!-- Oneshot Behavior -->
+                                <li>
+                                    <code>Oneshot</code>
+                                    <ul>
+                                        <li>The ticker is <u>immutable</u> and will assign <code>current_value</code> to a boundary's value if <code>current_value</code> were to hit <code>start_value</code> or <code>end_value</code>; start and end values are the boundaries.</li>
+                                        <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
+                                    </ul>
+                                </li>
+
+                                <!-- MutOneshot Behavior -->
+                                <li>
+                                    <code>MutOneshot</code>
+                                    <ul>
+                                        <li>The ticker is <u>mutable</u> and will assign <code>current_value</code> to a boundary's value if <code>current_value</code> were to hit <code>start_value</code> or <code>end_value</code>; start and end values are the boundaries.</li>
+                                        <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
+                                    </ul>
+                                </li>
+
+                                <!-- Freezing Behavior -->
+                                <li>
+                                    <code>Freezing</code>
+                                    <ul>
+                                        <li>The ticker begins <u>mutable</u>, but it will become <u>immutable</u> once <code>current_value</code> hits <code>end_value</code>.</li>
+                                        <li>The ticker's stored_time is set to 0.0 when <code>current_value</code> hits <code>end_value</code>.  This ensures the time state is completely reset once it reaches the end.</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </div>
-
-                        <!-- new -->
-                        <div class="block_5">
-                            <h5>new(V, V, V, F, bool, bool, bool, TickerBehavior)</h5>
-                            <p>Used for completely defining a custom ticker.</p>
-                        </div>
-
-                        <!-- new_looper -->
-                        <div class="block_5">
-                            <h5>new_looper(V, V, F, bool)</h5>
-                            <p>Creates an unpaused Looper ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is immutable and will loop when <code>current_value</code> hits either boundary, resetting back to the start.</p>
-                            <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
-                        </div>
-
-                        <!-- new_looper_custom -->
-                        <div class="block_5">
-                            <h5>new_looper_custom(V, V, V, F, bool, bool)</h5>
-                            <p>Creates an unpaused Looper ticker with fully custom starting fields. The ticker is immutable and will loop when <code>current_value</code> hits either boundary, resetting back to <code>start_value</code>.</p>
-                        </div>
-
-                        <!-- new_mut_looper -->
-                        <div class="block_5">
-                            <h5>new_mut_looper(V, V, F, bool)</h5>
-                            <p>Creates an unpaused MutLooper ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is mutable and will loop when <code>current_value</code> hits either boundary, resetting back to the start.</p>
-                            <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
-                        </div>
-
-                        <!-- new_mut_looper_custom -->
-                        <div class="block_5">
-                            <h5>new_mut_looper_custom(V, V, V, F, bool, bool)</h5>
-                            <p>Creates an unpaused MutLooper ticker with fully custom starting fields. The ticker is mutable and will loop when <code>current_value</code> hits either boundary, resetting back to <code>start_value</code>.</p>
-                        </div>
-
-                        <!-- new_oneshot -->
-                        <div class="block_5">
-                            <h5>new_oneshot(V, V, F, bool)</h5>
-                            <p>Creates an unpaused Oneshot ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is immutable and will assign <code>current_value</code> to whichever boundary it hits. <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
-                            <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
-                        </div>
-
-                        <!-- new_oneshot_custom -->
-                        <div class="block_5">
-                            <h5>new_oneshot_custom(V, V, V, F, bool, bool)</h5>
-                            <p>Creates an unpaused Oneshot ticker with fully custom starting fields. The ticker is immutable and will assign <code>current_value</code> to whichever boundary it hits; <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
-                        </div>
-
-                        <!-- new_mut_oneshot -->
-                        <div class="block_5">
-                            <h5>new_mut_oneshot(V, V, F, bool)</h5>
-                            <p>Creates an unpaused MutOneshot ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is mutable and will assign <code>current_value</code> to whichever boundary it hits. <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
-                            <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
-                        </div>
-
-                        <!-- new_mut_oneshot_custom -->
-                        <div class="block_5">
-                            <h5>new_mut_oneshot_custom(V, V, V, F, bool, bool)</h5>
-                            <p>Creates an unpaused MutOneshot ticker with fully custom starting fields. The ticker is mutable and will assign <code>current_value</code> to whichever boundary it hits; <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
-                        </div>
-
-                        <!-- new_freezing -->
-                        <div class="block_5">
-                            <h5>new_freezing(V, V, F, bool)</h5>
-                            <p>Creates an unpaused Freezing ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker begins mutable but becomes immutable once <code>current_value</code> hits <code>end_value</code>; <code>stored_time</code> resets to 0.0 at that point.</p>
-                            <p class=method_text">If the initial start and end values are equal, the tick direction defaults to up.</p>
-                        </div>
-
-                        <!-- new_freezing_custom -->
-                        <div class="block_5">
-                            <h5>new_freezing_custom(V, V, V, F, bool, bool)</h5>
-                            <p>Creates an unpaused Freezing ticker with fully custom starting fields. The ticker begins mutable but becomes immutable once <code>current_value</code> hits <code>end_value</code>; <code>stored_time</code> resets to 0.0 at that point.</p>
-                        </div>
-
-                        <!-- new_copy -->
-                        <div class="block_5">
-                            <h5>new_copy(Ticker)</h5>
-                            <p>Creates a copy of a passed ticker.</p>
-                        </div>
-
-                        <!-- new_copy_with_behavior_change -->
-                        <div class="block_5">
-                            <h5>new_copy_with_behavior_change(Ticker, TickerBehavior)</h5>
-                            <p>Creates a copy of a passed ticker with the only field change being the <code>behavior</code>, which is set to the passed <code>TickerBehavior</code> value.</p>
-                            <p>Useful for safely turning an immutable ticker into a mutable one — copy its values into a new mutable instance, then swap the immutable original out for the copy.</p>
-                        </div>
-
                     </div>
 
 
+                    <!-- Ticker Methods -->
+                    <div class="block_3">
+                        <h3 id="ticker-methods">Ticker Methods</h3>
 
-                    <!-- Getter Methods -->
-                    <div class="block_4">
-                        <h4>Getter Methods</h4>
-
-                        <!-- start_value -->
-                        <div class="block_5">
-                            <h5>.start_value()</h5>
-                            <p>Returns the <code>start_value</code> of a ticker.</p>
+                        <!-- Tick Method -->
+                        <div class="block_4">
+                            <h4 id="the-most-important-method">The Most Important Method</h4>
+                            <div class="block_5">
+                                <h5 id="tick-p">.tick(P)</h5>
+                                <p>Advances a ticker by taking in a passing of time between 2 events, <i>usually</i> for events that happen both consistently and constantly (such as when frames render); it does have the ability to take in <b>any</b> delta time.</p>
+                                <p>If you're wondering what exactly ticking does, here is the simplified version (the specifics can be found in the doc comments):</p>
+                                <ol>
+                                    <li>Increase <code>stored_time</code> by the value passed to the <code>.tick()</code> call (elapsed_time_between_events).</li>
+                                    <li>If <code>stored_time</code> is greater than or equal to the <code>time_interval</code>, change <code>current_value</code>.</li>
+                                    <li>Reassign <code>stored_time</code> to the result of <code>stored_time %= time_interval</code>.  We do this to carry over our remainder to keep the state of time accurate to the events that are being tracked.</li>
+                                </ol>
+                            </div>
                         </div>
 
-                        <!-- current_value -->
-                        <div class="block_5">
-                            <h5>.current_value()</h5>
-                            <p>Returns the <code>current_value</code> of a ticker.</p>
+                        <!-- Ticker Constructor Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-constructor-methods">Ticker Constructor Methods</h4>
+
+                            <!-- default -->
+                            <div class="block_5">
+                                <h5 id="default">default()</h5>
+                                <p>Creates a <code>MutLooper</code> that has the following properties:</p>
+                                <ul>
+                                    <li><code>start_value</code> is set to 0.</li>
+                                    <li>Ticks <code>current_value</code> from 0 to the ticker's max integer value (<code>V::MAX</code>).</li>
+                                    <li><code>end_value</code> is set to the ticker's max integer value (<code>V::MAX</code>).</li>
+                                    <li><code>time_interval</code> is set to 1.0.</li>
+                                    <li>Begins unpaused.</li>
+                                    <li>Will tick up.</li>
+                                    <li>Will handle time spikes.</li>
+                                </ul>
+                            </div>
+
+                            <!-- new -->
+                            <div class="block_5">
+                                <h5 id="new-v-v-v-f-bool-bool-bool-tickerbehavior">new(V, V, V, F, bool, bool, bool, TickerBehavior)</h5>
+                                <p>Used for completely defining a custom ticker.</p>
+                            </div>
+
+                            <!-- new_looper -->
+                            <div class="block_5">
+                                <h5 id="new-looper-v-v-f-bool">new_looper(V, V, F, bool)</h5>
+                                <p>Creates an unpaused Looper ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is immutable and will loop when <code>current_value</code> hits either boundary, resetting back to the start.</p>
+                                <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
+                            </div>
+
+                            <!-- new_looper_custom -->
+                            <div class="block_5">
+                                <h5 id="new-looper-custom-v-v-v-f-bool-bool">new_looper_custom(V, V, V, F, bool, bool)</h5>
+                                <p>Creates an unpaused Looper ticker with fully custom starting fields. The ticker is immutable and will loop when <code>current_value</code> hits either boundary, resetting back to <code>start_value</code>.</p>
+                            </div>
+
+                            <!-- new_mut_looper -->
+                            <div class="block_5">
+                                <h5 id="new-mut-looper-v-v-f-bool">new_mut_looper(V, V, F, bool)</h5>
+                                <p>Creates an unpaused MutLooper ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is mutable and will loop when <code>current_value</code> hits either boundary, resetting back to the start.</p>
+                                <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
+                            </div>
+
+                            <!-- new_mut_looper_custom -->
+                            <div class="block_5">
+                                <h5 id="new-mut-looper-custom-v-v-v-f-bool-bool">new_mut_looper_custom(V, V, V, F, bool, bool)</h5>
+                                <p>Creates an unpaused MutLooper ticker with fully custom starting fields. The ticker is mutable and will loop when <code>current_value</code> hits either boundary, resetting back to <code>start_value</code>.</p>
+                            </div>
+
+                            <!-- new_oneshot -->
+                            <div class="block_5">
+                                <h5 id="new-oneshot-v-v-f-bool">new_oneshot(V, V, F, bool)</h5>
+                                <p>Creates an unpaused Oneshot ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is immutable and will assign <code>current_value</code> to whichever boundary it hits. <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
+                                <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
+                            </div>
+
+                            <!-- new_oneshot_custom -->
+                            <div class="block_5">
+                                <h5 id="new-oneshot-custom-v-v-v-f-bool-bool">new_oneshot_custom(V, V, V, F, bool, bool)</h5>
+                                <p>Creates an unpaused Oneshot ticker with fully custom starting fields. The ticker is immutable and will assign <code>current_value</code> to whichever boundary it hits; <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
+                            </div>
+
+                            <!-- new_mut_oneshot -->
+                            <div class="block_5">
+                                <h5 id="new-mut-oneshot-v-v-f-bool">new_mut_oneshot(V, V, F, bool)</h5>
+                                <p>Creates an unpaused MutOneshot ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker is mutable and will assign <code>current_value</code> to whichever boundary it hits. <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
+                                <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
+                            </div>
+
+                            <!-- new_mut_oneshot_custom -->
+                            <div class="block_5">
+                                <h5 id="new-mut-oneshot-custom-v-v-v-f-bool-bool">new_mut_oneshot_custom(V, V, V, F, bool, bool)</h5>
+                                <p>Creates an unpaused MutOneshot ticker with fully custom starting fields. The ticker is mutable and will assign <code>current_value</code> to whichever boundary it hits; <code>stored_time</code> resets to 0.0 once <code>current_value</code> reaches <code>end_value</code>.</p>
+                            </div>
+
+                            <!-- new_freezing -->
+                            <div class="block_5">
+                                <h5 id="new-freezing-v-v-f-bool">new_freezing(V, V, F, bool)</h5>
+                                <p>Creates an unpaused Freezing ticker that ticks <code>current_value</code> from the supplied starting value to the passed end value. The ticker begins mutable but becomes immutable once <code>current_value</code> hits <code>end_value</code>; <code>stored_time</code> resets to 0.0 at that point.</p>
+                                <p>If the initial start and end values are equal, the tick direction defaults to up.</p>
+                            </div>
+
+                            <!-- new_freezing_custom -->
+                            <div class="block_5">
+                                <h5 id="new-freezing-custom-v-v-v-f-bool-bool">new_freezing_custom(V, V, V, F, bool, bool)</h5>
+                                <p>Creates an unpaused Freezing ticker with fully custom starting fields. The ticker begins mutable but becomes immutable once <code>current_value</code> hits <code>end_value</code>; <code>stored_time</code> resets to 0.0 at that point.</p>
+                            </div>
+
+                            <!-- new_copy -->
+                            <div class="block_5">
+                                <h5 id="new-copy-ticker">new_copy(Ticker)</h5>
+                                <p>Creates a copy of a passed ticker.</p>
+                            </div>
+
+                            <!-- new_copy_with_behavior_change -->
+                            <div class="block_5">
+                                <h5 id="new-copy-with-behavior-change-ticker-tickerbehavior">new_copy_with_behavior_change(Ticker, TickerBehavior)</h5>
+                                <p>Creates a copy of a passed ticker with the only field change being the <code>behavior</code>, which is set to the passed <code>TickerBehavior</code> value.</p>
+                                <p>Useful for safely turning an immutable ticker into a mutable one — copy its values into a new mutable instance, then swap the immutable original out for the copy.</p>
+                            </div>
+
                         </div>
 
-                        <!-- end_value -->
-                        <div class="block_5">
-                            <h5>.end_value()</h5>
-                            <p>Returns the <code>end_value</code> of a ticker.</p>
+
+
+                        <!-- Ticker Getter Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-getter-methods">Ticker Getter Methods</h4>
+
+                            <!-- start_value -->
+                            <div class="block_5">
+                                <h5 id="start-value">.start_value()</h5>
+                                <p>Returns the <code>start_value</code> of a ticker.</p>
+                            </div>
+
+                            <!-- current_value -->
+                            <div class="block_5">
+                                <h5 id="current-value">.current_value()</h5>
+                                <p>Returns the <code>current_value</code> of a ticker.</p>
+                            </div>
+
+                            <!-- end_value -->
+                            <div class="block_5">
+                                <h5 id="end-value">.end_value()</h5>
+                                <p>Returns the <code>end_value</code> of a ticker.</p>
+                            </div>
+
+                            <!-- time_interval -->
+                            <div class="block_5">
+                                <h5 id="time-interval">.time_interval()</h5>
+                                <p>Returns the <code>time_interval</code> of a ticker — the amount of time it takes for <code>current_value</code> to increase or decrease by 1.</p>
+                                <p>A ticker has no built-in concept of "seconds" or any other unit; <code>time_interval</code> and <code>stored_time</code> are just two numbers compared inside <code>.tick()</code>, and the unit they represent depends entirely on what's passed into <code>.tick()</code>.</p>
+                            </div>
+
+                            <!-- stored_time -->
+                            <div class="block_5">
+                                <h5 id="stored-time">.stored_time()</h5>
+                                <p>Returns the <code>stored_time</code> of a ticker — the leftover remainder from the last <code>.tick()</code> call, not the total elapsed time since creation or reset.</p>
+                                <p>Mainly useful for debugging, logging, or custom structures that need to inspect or manually carry over a ticker's in-progress timing state.</p>
+                            </div>
+
+                            <!-- is_paused -->
+                            <div class="block_5">
+                                <h5 id="is-paused">.is_paused()</h5>
+                                <p>Returns true if the ticker is paused, false otherwise.</p>
+                            </div>
+
+                            <!-- is_unpaused -->
+                            <div class="block_5">
+                                <h5 id="is-unpaused">.is_unpaused()</h5>
+                                <p>Returns true if the ticker is unpaused, false otherwise.</p>
+                            </div>
+
+                            <!-- is_ticking_up -->
+                            <div class="block_5">
+                                <h5 id="is-ticking-up">.is_ticking_up()</h5>
+                                <p>Returns true if a ticker is set to tick its <code>current_value</code> up, false otherwise.</p>
+                            </div>
+
+                            <!-- is_ticking_down -->
+                            <div class="block_5">
+                                <h5 id="is-ticking-down">.is_ticking_down()</h5>
+                                <p>Returns true if a ticker is set to tick its <code>current_value</code> down, false otherwise.</p>
+                            </div>
+
+                            <!-- is_handling_time_spikes -->
+                            <div class="block_5">
+                                <h5 id="is-handling-time-spikes">.is_handling_time_spikes()</h5>
+                                <p>Returns true if the ticker can change <code>current_value</code> by any amount greater than or equal to 0 in a single <code>.tick()</code> call, catching up all built-up time at once.</p>
+                                <p>Returns false if the ticker can only change <code>current_value</code> by 1 or 0 per <code>.tick()</code> call, no matter how much time has built up between calls.</p>
+                            </div>
+
+                            <!-- behavior -->
+                            <div class="block_5">
+                                <h5 id="behavior">.behavior()</h5>
+                                <p>Returns the behavior type of the ticker.</p>
+                            </div>
+
                         </div>
 
-                        <!-- time_interval -->
-                        <div class="block_5">
-                            <h5>.time_interval()</h5>
-                            <p>Returns the <code>time_interval</code> of a ticker — the amount of time it takes for <code>current_value</code> to increase or decrease by 1.</p>
-                            <p>A ticker has no built-in concept of "seconds" or any other unit; <code>time_interval</code> and <code>stored_time</code> are just two numbers compared inside <code>.tick()</code>, and the unit they represent depends entirely on what's passed into <code>.tick()</code>.</p>
+
+
+                        <!-- Ticker Setter Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-setter-methods">Ticker Setter Methods</h4>
+
+                            <!-- set_start_value -->
+                            <div class="block_5">
+                                <h5 id="set-start-value-v">.set_start_value(V)</h5>
+                                <p>Changes <code>start_value</code> to the passed value.</p>
+                                <p>If the new <code>start_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge. <code>start_value</code> itself cannot go outside <code>V::MIN</code> to <code>V::MAX</code> and will be clamped down if it does.</p>
+                            </div>
+
+                            <!-- set_current_value -->
+                            <div class="block_5">
+                                <h5 id="set-current-value-v">.set_current_value(V)</h5>
+                                <p>Changes <code>current_value</code> to the passed value.</p>
+                                <p><code>current_value</code> cannot go outside the range that <code>start_value</code> and <code>end_value</code> create and will be clamped down if it does.</p>
+                            </div>
+
+                            <!-- set_end_value -->
+                            <div class="block_5">
+                                <h5 id="set-end-value-v">.set_end_value(V)</h5>
+                                <p>Changes <code>end_value</code> to the passed value.</p>
+                                <p>If the new <code>end_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge. <code>end_value</code> itself cannot go outside <code>V::MIN</code> to <code>V::MAX</code> and will be clamped down if it does.</p>
+                            </div>
+
+                            <!-- pause -->
+                            <div class="block_5">
+                                <h5 id="pause">.pause()</h5>
+                                <p>Prevents <code>.tick()</code> calls on a ticker from doing their job.</p>
+                            </div>
+
+                            <!-- pause -->
+                            <div class="block_5">
+                                <h5 id="unpause">.unpause()</h5>
+                                <p>Allows <code>.tick()</code> calls on a ticker to do their job.</p>
+                            </div>
+
+                            <!-- tick_up -->
+                            <div class="block_5">
+                                <h5 id="tick-up">.tick_up()</h5>
+                                <p>Causes the ticker's <code>current_value</code> to count up.</p>
+                            </div>
+
+                            <!-- tick_down -->
+                            <div class="block_5">
+                                <h5 id="tick-down">.tick_down()</h5>
+                                <p>Causes the ticker's <code>current_value</code> to count down.</p>
+                            </div>
+
+                            <!-- start_handling_time_spikes -->
+                            <div class="block_5">
+                                <h5 id="start-handling-time-spikes">.start_handling_time_spikes()</h5>
+                                <p>Makes it so that <code>.tick()</code> calls on a ticker add or subtract all built-up integer time since the last <code>.tick()</code> call to <code>current_value</code> (direction depends on <code>is_ticking_up</code>), with any floating remainder carried over into <code>stored_time</code> for the next call.</p>
+                            </div>
+
+                            <!-- stop_handling_time_spikes -->
+                            <div class="block_5">
+                                <h5 id="stop-handling-time-spikes">.stop_handling_time_spikes()</h5>
+                                <p>Makes it so that <code>.tick()</code> calls on a ticker only add or subtract 1 to <code>current_value</code> (direction depends on <code>is_ticking_up</code>), no matter how much time has built up between calls.</p>
+                            </div>
+
+                            <!-- set_behavior -->
+                            <div class="block_5">
+                                <h5 id="set-behavior-tickerbehavior">.set_behavior(TickerBehavior)</h5>
+                                <p>Switches the behavior of a ticker to the passed <code>TickerBehavior</code> type.</p>
+                                <p>Does not work for tickers with immutable behavior — use <code>new_copy_with_behavior_change</code> to simulate switching an immutable ticker to mutable behavior, then substitute the copy in for the original.</p>
+                            </div>
+
                         </div>
 
-                        <!-- stored_time -->
-                        <div class="block_5">
-                            <h5>.stored_time()</h5>
-                            <p>Returns the <code>stored_time</code> of a ticker — the leftover remainder from the last <code>.tick()</code> call, not the total elapsed time since creation or reset.</p>
-                            <p>Mainly useful for debugging, logging, or custom structures that need to inspect or manually carry over a ticker's in-progress timing state.</p>
+
+
+                        <!-- Ticker Equality Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-equality-methods">Ticker Equality Methods</h4>
+
+                            <!-- is_current_at_start -->
+                            <div class="block_5">
+                                <h5 id="is-current-at-start">.is_current_at_start()</h5>
+                                <p>Returns true if <code>current_value</code> and <code>start_value</code> are equal to one another, false otherwise.</p>
+                                <p>Useful in oneshot tickers that count down to <code>start_value</code>, to determine if the oneshot is finished.</p>
+                            </div>
+
+                            <!-- is_current_at_end -->
+                            <div class="block_5">
+                                <h5 id="is-current-at-end">.is_current_at_end()</h5>
+                                <p>Returns true if <code>current_value</code> and <code>end_value</code> are equal to one another, false otherwise.</p>
+                                <p>Useful in oneshot tickers that count up to <code>end_value</code>, to determine if the oneshot is finished.</p>
+                            </div>
+
+                            <!-- is_start_at_end -->
+                            <div class="block_5">
+                                <h5 id="is-start-at-end">.is_start_at_end()</h5>
+                                <p>Returns true if <code>start_value</code> and <code>end_value</code> are equal to one another, false otherwise.</p>
+                                <p>This is mainly useful when the bounds of a mutable ticker are slowly tightening and you need to detect when they've finally met.</p>
+                            </div>
+
                         </div>
 
-                        <!-- is_paused -->
-                        <div class="block_5">
-                            <h5>.is_paused()</h5>
-                            <p>Returns true if the ticker is paused, false otherwise.</p>
+
+
+                        <!-- Ticker Difference Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-difference-methods">Ticker Difference Methods</h4>
+
+                            <!-- difference_from_start -->
+                            <div class="block_5">
+                                <h5 id="difference-from-start">.difference_from_start()</h5>
+                                <p>Returns the difference between <code>current_value</code> and <code>start_value</code>. Will only return positive numbers, including 0.</p>
+                            </div>
+
+                            <!-- difference_from__end -->
+                            <div class="block_5">
+                                <h5 id="difference-from-end">.difference_from_end()</h5>
+                                <p>Returns the difference between <code>current_value</code> and <code>end_value</code>. Will only return positive numbers, including 0.</p>
+                            </div>
+
+                            <!-- difference_from_start_to_end -->
+                            <div class="block_5">
+                                <h5 id="difference-from-start-to-end">.difference_from_start_to_end()</h5>
+                                <p>Returns the difference between <code>start_value</code> and <code>end_value</code>. Will only return positive numbers, including 0.</p>
+                            </div>
+
                         </div>
 
-                        <!-- is_unpaused -->
-                        <div class="block_5">
-                            <h5>.is_unpaused()</h5>
-                            <p>Returns true if the ticker is unpaused, false otherwise.</p>
+
+
+                        <!-- Ticker Digit Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-digit-methods">Ticker Digit Methods</h4>
+
+                            <!-- digit_1 -->
+                            <div class="block_5">
+                                <h5 id="digit-1">.digit_1()</h5>
+                                <p>Returns the digit in the ones-place of <code>current_value</code>. Always positive.</p>
+                            </div>
+
+                            <!-- digit_2 -->
+                            <div class="block_5">
+                                <h5 id="digit-2">.digit_2()</h5>
+                                <p>Returns the digit in the tens-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_3 -->
+                            <div class="block_5">
+                                <h5 id="digit-3">.digit_3()</h5>
+                                <p>Returns the digit in the hundreds-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_4 -->
+                            <div class="block_5">
+                                <h5 id="digit-4">.digit_4()</h5>
+                                <p>Returns the digit in the thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_5 -->
+                            <div class="block_5">
+                                <h5 id="digit-5">.digit_5()</h5>
+                                <p>Returns the digit in the ten-thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_6 -->
+                            <div class="block_5">
+                                <h5 id="digit-6">.digit_6()</h5>
+                                <p>Returns the digit in the hundred-thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_7 -->
+                            <div class="block_5">
+                                <h5 id="digit-7">.digit_7()</h5>
+                                <p>Returns the digit in the millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_8 -->
+                            <div class="block_5">
+                                <h5 id="digit-8">.digit_8()</h5>
+                                <p>Returns the digit in the ten-millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
+                            <!-- digit_9 -->
+                            <div class="block_5">
+                                <h5 id="digit-9">.digit_9()</h5>
+                                <p>Returns the digit in the hundred-millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
+                            </div>
+
                         </div>
 
-                        <!-- is_ticking_up -->
-                        <div class="block_5">
-                            <h5>.is_ticking_up()</h5>
-                            <p>Returns true if a ticker is set to tick its <code>current_value</code> up, false otherwise.</p>
+
+
+                        <!-- Ticker Digit DDA Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-digit-drop-accounting-methods">Ticker Digit-Drop Accounting Methods</h4>
+                            <p>Digit-Drop Accounting (DDA) is what tells you the difference between a digit that is absent and a digit that is simply 0.  For any Digit DDA method, if a specified digit exists within <code>current_value</code>, its value is returned as <code>Some(positive_i8)</code>.  If the digit doesn't exist, then <code>None</code> is returned.</p>
+                            <p>The ones-place always exists, so there is no DDA method for the first digit.</p>
+
+                            <!-- digit_2_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-2-with-dda">.digit_2_with_dda()</h5>
+                                <p>Returns the digit in the tens-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_3_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-3-with-dda">.digit_3_with_dda()</h5>
+                                <p>Returns the digit in the hundreds-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_4_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-4-with-dda">.digit_4_with_dda()</h5>
+                                <p>Returns the digit in the thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_5_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-5-with-dda">.digit_5_with_dda()</h5>
+                                <p>Returns the digit in the ten-thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_6_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-6-with-dda">.digit_6_with_dda()</h5>
+                                <p>Returns the digit in the hundred-thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_7_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-7-with-dda">.digit_7_with_dda()</h5>
+                                <p>Returns the digit in the millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_8_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-8-with-dda">.digit_8_with_dda()</h5>
+                                <p>Returns the digit in the ten-millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
+                            <!-- digit_9_with_dda -->
+                            <div class="block_5">
+                                <h5 id="digit-9-with-dda">.digit_9_with_dda()</h5>
+                                <p>Returns the digit in the hundred-millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
+                            </div>
+
                         </div>
 
-                        <!-- is_ticking_down -->
-                        <div class="block_5">
-                            <h5>.is_ticking_down()</h5>
-                            <p>Returns true if a ticker is set to tick its <code>current_value</code> down, false otherwise.</p>
+
+
+                        <!-- Ticker Add Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-add-methods">Ticker Add Methods</h4>
+
+                            <!-- add_to_start_value -->
+                            <div class="block_5">
+                                <h5 id="add-to-start-value-v">.add_to_start_value(V)</h5>
+                                <p>Adds to the <code>start_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>V::MIN</code> to <code>V::MAX</code> (inclusive).</p>
+                                <p>If the new <code>start_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge.</p>
+                            </div>
+
+                            <!-- add_to_current_value -->
+                            <div class="block_5">
+                                <h5 id="add-to-current-value-v">.add_to_current_value(V)</h5>
+                                <p>Adds to the <code>current_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>start_value</code> to <code>end_value</code> (inclusive).</p>
+                            </div>
+
+                            <!-- add_to_end_value -->
+                            <div class="block_5">
+                                <h5 id="add-to-end-value-v">.add_to_end_value(V)</h5>
+                                <p>Adds to the <code>end_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>V::MIN</code> to <code>V::MAX</code> (inclusive).</p>
+                                <p>If the new <code>end_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge.</p>
+                            </div>
+
+                            <!-- add_to_time_interval -->
+                            <div class="block_5">
+                                <h5 id="add-to-time-interval-p">.add_to_time_interval(P)</h5>
+                                <p>Adds to the <code>time_interval</code> of the ticker by the passed value; negatives subtract. <code>time_interval</code> can never be 0, negative, or exceed <code>P::MAX</code>, since that would cause <code>.tick()</code> to produce erratic values.</p>
+                                <p>This cannot be used to flip a ticker's tick direction — use <code>.tick_up()</code> or <code>.tick_down()</code> for that instead.</p>
+                            </div>
+
                         </div>
 
-                        <!-- is_handling_time_spikes -->
-                        <div class="block_5">
-                            <h5>.is_handling_time_spikes()</h5>
-                            <p>Returns true if the ticker can change <code>current_value</code> by any amount greater than or equal to 0 in a single <code>.tick()</code> call, catching up all built-up time at once.</p>
-                            <p>Returns false if the ticker can only change <code>current_value</code> by 1 or 0 per <code>.tick()</code> call, no matter how much time has built up between calls.</p>
+
+
+                        <!-- Ticker Percentage Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-percentage-methods">Ticker Percentage Methods</h4>
+
+                            <!-- percentage_completed -->
+                            <div class="block_5">
+                                <h5 id="percentage-completed">.percentage_completed()</h5>
+                                <p>Returns the exact percentage of completion from <code>start_value</code> to <code>end_value</code> as a float.</p>
+                                <p>A value of <code>0.0</code> means <code>current_value</code> is at <code>start_value</code>, and <code>1.0</code> means it's at <code>end_value</code>. Returns <code>None</code> if <code>start_value</code> and <code>end_value</code> are equal.</p>
+                            </div>
+
+                            <!-- percentage_remaining -->
+                            <div class="block_5">
+                                <h5 id="percentage-remaining">.percentage_remaining()</h5>
+                                <p>Returns the remaining percentage needed to reach <code>end_value</code> as a float.</p>
+                                <p>A value of <code>0.0</code> means <code>current_value</code> is at <code>end_value</code>, and <code>1.0</code> means it's at <code>start_value</code>. Returns <code>None</code> if <code>start_value</code> and <code>end_value</code> are equal.</p>
+                            </div>
                         </div>
 
-                        <!-- behavior -->
-                        <div class="block_5">
-                            <h5>.behavior()</h5>
-                            <p>Returns the behavior type of the ticker.</p>
+
+
+                        <!-- Ticker Reset Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-reset-methods">Ticker Reset Methods</h4>
+
+                            <!-- soft_reset -->
+                            <div class="block_5">
+                                <h5 id="soft-reset">.soft_reset()</h5>
+                                <p>Resets <code>current_value</code> back to <code>start_value</code>.</p>
+                            </div>
+
+                            <!-- hard_reset -->
+                            <div class="block_5">
+                                <h5 id="hard-reset">.hard_reset()</h5>
+                                <p>Resets <code>current_value</code> back to <code>start_value</code> and zeroes out <code>stored_time</code>. Best used when you want to completely wipe whatever has been accumulated, including the timing state.</p>
+                                <p>If you need to carry over the timing remainder from the last <code>.tick()</code>, do not use this.</p>
+                            </div>
+
                         </div>
 
-                    </div>
 
 
+                        <!-- Ticker Helper Methods -->
+                        <div class="block_4">
+                            <h4 id="ticker-helper-methods">Ticker Helper Methods</h4>
 
-                    <!-- Setter Methods -->
-                    <div class="block_4">
-                        <h4>Setter Methods</h4>
+                            <!-- is_mutable -->
+                            <div class="block_5">
+                                <h5 id="is-mutable">.is_mutable()</h5>
+                                <p>Returns true if the <code>behavior</code> of a ticker is mutable, false otherwise.</p>
+                            </div>
 
-                        <!-- set_start_value -->
-                        <div class="block_5">
-                            <h5>.set_start_value(V)</h5>
-                            <p>Changes <code>start_value</code> to the passed value.</p>
-                            <p>If the new <code>start_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge. <code>start_value</code> itself cannot go outside <code>V::MIN</code> to <code>V::MAX</code> and will be clamped down if it does.</p>
-                        </div>
+                            <!-- print_information -->
+                            <div class="block_5">
+                                <h5 id="print-information">.print_information()</h5>
+                                <p>Prints out all the fields and their values of a ticker.</p>
+                            </div>
 
-                        <!-- set_current_value -->
-                        <div class="block_5">
-                            <h5>.set_current_value(V)</h5>
-                            <p>Changes <code>current_value</code> to the passed value.</p>
-                            <p><code>current_value</code> cannot go outside the range that <code>start_value</code> and <code>end_value</code> create and will be clamped down if it does.</p>
-                        </div>
-
-                        <!-- set_end_value -->
-                        <div class="block_5">
-                            <h5>.set_end_value(V)</h5>
-                            <p>Changes <code>end_value</code> to the passed value.</p>
-                            <p>If the new <code>end_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge. <code>end_value</code> itself cannot go outside <code>V::MIN</code> to <code>V::MAX</code> and will be clamped down if it does.</p>
-                        </div>
-
-                        <!-- pause -->
-                        <div class="block_5">
-                            <h5>.pause()</h5>
-                            <p>Prevents <code>.tick()</code> calls on a ticker from doing their job.</p>
-                        </div>
-
-                        <!-- pause -->
-                        <div class="block_5">
-                            <h5>.unpause()</h5>
-                            <p>Allows <code>.tick()</code> calls on a ticker to do their job.</p>
-                        </div>
-
-                        <!-- tick_up -->
-                        <div class="block_5">
-                            <h5>.tick_up()</h5>
-                            <p>Causes the ticker's <code>current_value</code> to count up.</p>
-                        </div>
-
-                        <!-- tick_down -->
-                        <div class="block_5">
-                            <h5>.tick_down()</h5>
-                            <p>Causes the ticker's <code>current_value</code> to count down.</p>
-                        </div>
-
-                        <!-- start_handling_time_spikes -->
-                        <div class="block_5">
-                            <h5>.start_handling_time_spikes()</h5>
-                            <p>Makes it so that <code>.tick()</code> calls on a ticker add or subtract all built-up integer time since the last <code>.tick()</code> call to <code>current_value</code> (direction depends on <code>is_ticking_up</code>), with any floating remainder carried over into <code>stored_time</code> for the next call.</p>
-                        </div>
-
-                        <!-- stop_handling_time_spikes -->
-                        <div class="block_5">
-                            <h5>.stop_handling_time_spikes()</h5>
-                            <p>Makes it so that <code>.tick()</code> calls on a ticker only add or subtract 1 to <code>current_value</code> (direction depends on <code>is_ticking_up</code>), no matter how much time has built up between calls.</p>
-                        </div>
-
-                        <!-- set_behavior -->
-                        <div class="block_5">
-                            <h5>.set_behavior(TickerBehavior)</h5>
-                            <p>Switches the behavior of a ticker to the passed <code>TickerBehavior</code> type.</p>
-                            <p>Does not work for tickers with immutable behavior — use <code>new_copy_with_behavior_change</code> to simulate switching an immutable ticker to mutable behavior, then substitute the copy in for the original.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Equality Methods -->
-                    <div class="block_4">
-                        <h4>Equality Methods</h4>
-
-                        <!-- is_current_at_start -->
-                        <div class="block_5">
-                            <h5>.is_current_at_start()</h5>
-                            <p>Returns true if <code>current_value</code> and <code>start_value</code> are equal to one another, false otherwise.</p>
-                            <p>Useful in oneshot tickers that count down to <code>start_value</code>, to determine if the oneshot is finished.</p>
-                        </div>
-
-                        <!-- is_current_at_end -->
-                        <div class="block_5">
-                            <h5>.is_current_at_end()</h5>
-                            <p>Returns true if <code>current_value</code> and <code>end_value</code> are equal to one another, false otherwise.</p>
-                            <p>Useful in oneshot tickers that count up to <code>end_value</code>, to determine if the oneshot is finished.</p>
-                        </div>
-
-                        <!-- is_start_at_end -->
-                        <div class="block_5">
-                            <h5>.is_start_at_end()</h5>
-                            <p>Returns true if <code>start_value</code> and <code>end_value</code> are equal to one another, false otherwise.</p>
-                            <p>This is mainly useful when the bounds of a mutable ticker are slowly tightening and you need to detect when they've finally met.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Difference Methods -->
-                    <div class="block_4">
-                        <h4>Difference Methods</h4>
-
-                        <!-- difference_from_start -->
-                        <div class="block_5">
-                            <h5>.difference_from_start()</h5>
-                            <p>Returns the difference between <code>current_value</code> and <code>start_value</code>. Will only return positive numbers, including 0.</p>
-                        </div>
-
-                        <!-- difference_from__end -->
-                        <div class="block_5">
-                            <h5>.difference_from_end()</h5>
-                            <p>Returns the difference between <code>current_value</code> and <code>end_value</code>. Will only return positive numbers, including 0.</p>
-                        </div>
-
-                        <!-- difference_from_start_to_end -->
-                        <div class="block_5">
-                            <h5>.difference_from_start_to_end()</h5>
-                            <p>Returns the difference between <code>start_value</code> and <code>end_value</code>. Will only return positive numbers, including 0.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Digit Methods -->
-                    <div class="block_4">
-                        <h4>Digit Methods</h4>
-
-                        <!-- digit_1 -->
-                        <div class="block_5">
-                            <h5>.digit_1()</h5>
-                            <p>Returns the digit in the ones-place of <code>current_value</code>. Always positive.</p>
-                        </div>
-
-                        <!-- digit_2 -->
-                        <div class="block_5">
-                            <h5>.digit_2()</h5>
-                            <p>Returns the digit in the tens-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_3 -->
-                        <div class="block_5">
-                            <h5>.digit_3()</h5>
-                            <p>Returns the digit in the hundreds-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_4 -->
-                        <div class="block_5">
-                            <h5>.digit_4()</h5>
-                            <p>Returns the digit in the thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_5 -->
-                        <div class="block_5">
-                            <h5>.digit_5()</h5>
-                            <p>Returns the digit in the ten-thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_6 -->
-                        <div class="block_5">
-                            <h5>.digit_6()</h5>
-                            <p>Returns the digit in the hundred-thousands-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_7 -->
-                        <div class="block_5">
-                            <h5>.digit_7()</h5>
-                            <p>Returns the digit in the millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_8 -->
-                        <div class="block_5">
-                            <h5>.digit_8()</h5>
-                            <p>Returns the digit in the ten-millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                        <!-- digit_9 -->
-                        <div class="block_5">
-                            <h5>.digit_9()</h5>
-                            <p>Returns the digit in the hundred-millions-place of <code>current_value</code>. Always positive; returns 0 if the digit doesn't exist.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Digit DDA Methods -->
-                    <div class="block_4">
-                        <h4>Digit-Drop Accounting Methods</h4>
-                        <p>Digit-Drop Accounting (DDA) is what tells you the difference between a digit that is absent and a digit that is simply 0.  For any Digit DDA method, if a specified digit exists within <code>current_value</code>, its value is returned as <code>Some(positive_i8)</code>.  If the digit doesn't exist, then <code>None</code> is returned.</p>
-                        <p>The ones-place always exists, so there is no DDA method for the first digit.</p>
-
-                        <!-- digit_2_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_2_with_dda()</h5>
-                            <p>Returns the digit in the tens-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_3_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_3_with_dda()</h5>
-                            <p>Returns the digit in the hundreds-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_4_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_4_with_dda()</h5>
-                            <p>Returns the digit in the thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_5_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_5_with_dda()</h5>
-                            <p>Returns the digit in the ten-thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_6_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_6_with_dda()</h5>
-                            <p>Returns the digit in the hundred-thousands-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_7_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_7_with_dda()</h5>
-                            <p>Returns the digit in the millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_8_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_8_with_dda()</h5>
-                            <p>Returns the digit in the ten-millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                        <!-- digit_9_with_dda -->
-                        <div class="block_5">
-                            <h5>.digit_9_with_dda()</h5>
-                            <p>Returns the digit in the hundred-millions-place of <code>current_value</code> as <code>Some(positive_i8)</code> if it exists, or <code>None</code> if it doesn't.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Add Methods -->
-                    <div class="block_4">
-                        <h4>Add Methods</h4>
-
-                        <!-- add_to_start_value -->
-                        <div class="block_5">
-                            <h5>.add_to_start_value(V)</h5>
-                            <p>Adds to the <code>start_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>V::MIN</code> to <code>V::MAX</code> (inclusive).</p>
-                            <p>If the new <code>start_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge.</p>
-                        </div>
-
-                        <!-- add_to_current_value -->
-                        <div class="block_5">
-                            <h5>.add_to_current_value(V)</h5>
-                            <p>Adds to the <code>current_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>start_value</code> to <code>end_value</code> (inclusive).</p>
-                        </div>
-
-                        <!-- add_to_end_value -->
-                        <div class="block_5">
-                            <h5>.add_to_end_value(V)</h5>
-                            <p>Adds to the <code>end_value</code> of the ticker by the passed value; negatives subtract. The result will never overflow or wrap, staying within <code>V::MIN</code> to <code>V::MAX</code> (inclusive).</p>
-                            <p>If the new <code>end_value</code> shifts the valid range such that <code>current_value</code> is left outside the boundaries, <code>current_value</code> is automatically clamped to the nearest valid edge.</p>
-                        </div>
-
-                        <!-- add_to_time_interval -->
-                        <div class="block_5">
-                            <h5>.add_to_time_interval(P)</h5>
-                            <p>Adds to the <code>time_interval</code> of the ticker by the passed value; negatives subtract. <code>time_interval</code> can never be 0, negative, or exceed <code>P::MAX</code>, since that would cause <code>.tick()</code> to produce erratic values.</p>
-                            <p>This cannot be used to flip a ticker's tick direction — use <code>.tick_up()</code> or <code>.tick_down()</code> for that instead.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Percentage Methods -->
-                    <div class="block_4">
-                        <h4>Percentage Methods</h4>
-
-                        <!-- percentage_completed -->
-                        <div class="block_5">
-                            <h5>.percentage_completed()</h5>
-                            <p>Returns the exact percentage of completion from <code>start_value</code> to <code>end_value</code> as a float.</p>
-                            <p>A value of <code>0.0</code> means <code>current_value</code> is at <code>start_value</code>, and <code>1.0</code> means it's at <code>end_value</code>. Returns <code>None</code> if <code>start_value</code> and <code>end_value</code> are equal.</p>
-                        </div>
-
-                        <!-- percentage_remaining -->
-                        <div class="block_5">
-                            <h5>.percentage_remaining()</h5>
-                            <p>Returns the remaining percentage needed to reach <code>end_value</code> as a float.</p>
-                            <p>A value of <code>0.0</code> means <code>current_value</code> is at <code>end_value</code>, and <code>1.0</code> means it's at <code>start_value</code>. Returns <code>None</code> if <code>start_value</code> and <code>end_value</code> are equal.</p>
-                        </div>
-                    </div>
-
-
-
-                    <!-- Reset Methods -->
-                    <div class="block_4">
-                        <h4>Reset Methods</h4>
-
-                        <!-- soft_reset -->
-                        <div class="block_5">
-                            <h5>.soft_reset()</h5>
-                            <p>Resets <code>current_value</code> back to <code>start_value</code>.</p>
-                        </div>
-
-                        <!-- hard_reset -->
-                        <div class="block_5">
-                            <h5>.hard_reset()</h5>
-                            <p>Resets <code>current_value</code> back to <code>start_value</code> and zeroes out <code>stored_time</code>. Best used when you want to completely wipe whatever has been accumulated, including the timing state.</p>
-                            <p>If you need to carry over the timing remainder from the last <code>.tick()</code>, do not use this.</p>
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Helper Methods -->
-                    <div class="block_4">
-                        <h4>Helper Methods</h4>
-
-                        <!-- is_mutable -->
-                        <div class="block_5">
-                            <h5>.is_mutable()</h5>
-                            <p>Returns true if the current behavior of a ticker is mutable, false otherwise.</p>
-                        </div>
-
-                        <!-- print_information -->
-                        <div class="block_5">
-                            <h5>.print_information()</h5>
-                            <p>Prints out all the field values within a ticker.</p>
                         </div>
 
                     </div>
 
                 </div>
-
             </div>
+
         </div>
     </body>
 </html>

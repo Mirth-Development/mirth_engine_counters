@@ -2,22 +2,165 @@
 * {
     padding: 0;
     margin: 0 auto;
+    box-sizing: border-box;
+    color: #ffbfbf;
+    font-family: Spectral, sans-serif;
     font-style: normal;
     font-weight: normal;
+    line-height: 1.5;
 }
 
 /* ================================================================ */
-/* BASE PAGE STYLES                                                 */
+/* BODY                                                             */
 /* ================================================================ */
 body {
     background-color: #000000;
-    color: #ffbfbf;
-    font-family: Spectral, sans-serif;
-    line-height: 1.5;
-    max-width: 900px;
+}
+
+/* ================================================================ */
+/* PAGE CONTENT BOX                                                 */
+/* ================================================================ */
+#page_content {
+    margin-left: 500px;
     padding: 2rem;
 }
 
+/* ================================================================ */
+/* NAVIGATION                                                       */
+/* ================================================================ */
+#navigation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 500px;
+    height: 100vh;
+    overflow-y: auto;
+    background-color: #1b1a1a;
+    border-right: 1px solid #8e8e8e;
+    padding: 1rem;
+}
+
+#navigation_title {
+    text-align: center;
+    color: #fffcdd;
+    font-family: Cinzel, sans-serif;
+    font-size: 2rem;
+}
+
+.nav_box_1,
+.nav_box_2,
+.nav_box_3,
+.nav_box_4,
+.nav_box_5 {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.nav_box_1:last-child,
+.nav_box_2:last-child,
+.nav_box_3:last-child,
+.nav_box_4:last-child,
+.nav_box_5:last-child {
+    margin-bottom: 0;
+}
+
+.nav_box_1 a,
+.nav_box_2 a,
+.nav_box_3 a,
+.nav_box_4 a,
+.nav_box_5 a {
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.nav_box_1 a:last-child,
+.nav_box_2 a:last-child,
+.nav_box_3 a:last-child,
+.nav_box_4 a:last-child,
+.nav_box_5 a:last-child {
+    margin-bottom: 0;
+}
+
+#navigation a:hover {
+    color: #ff8b2a;
+    text-decoration: underline;
+}
+
+.nav_box_1 {
+    background-color: #100f0f;
+    border-radius: 0;
+    border: 1px solid #3a3a3a;
+    padding: 1rem;
+}
+
+.nav_box_2 {
+    background-color: #000000;
+    border-radius: 0;
+    border: 1px solid #3a3a3a;
+    padding: 1rem;
+}
+
+.nav_box_3 {
+    background-color: #202020;
+    border-radius: 5px;
+    border: 1px solid #272727;
+    padding: 0.5rem;
+}
+
+.nav_box_4 {
+    background-color: #0C0C0C;
+    border-radius: 8px;
+    border: 3px solid #000000;
+    padding: 1rem;
+}
+
+.nav_box_5 {
+    background-color: #000000;
+    border-radius: 0;
+    border: 1px solid #3a3a3a;
+    padding: 0.25rem;
+}
+
+/* For 1st Level Headers */
+.nav_box_1 a {
+    color: #FFBE6F;
+    font-size: 1.2rem;
+    font-weight: bold;
+    font-family: Cinzel, sans-serif;
+}
+
+/* For 2nd Level Headers */
+.nav_box_2 a {
+    color: #b6a431;
+    font-size: 1.15rem;
+    font-weight: bold;
+    font-family: Spectral, sans-serif;
+}
+
+/* For 3rd Level Headers */
+.nav_box_3 a {
+    color: #ff8b2a;
+    font-size: 1.08rem;
+    font-weight: normal;
+    font-family: Spectral, sans-serif;
+}
+
+/* For 4th Level Headers */
+.nav_box_4 a {
+    color: #bdc37d;
+    font-size: 1.05rem;
+    font-weight: normal;
+    font-family: Spectral, sans-serif;
+}
+
+/* For 5th Level Headers */
+.nav_box_5 a {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: normal;
+    font-family: Spectral, sans-serif;
+}
 
 
 /* ================================================================ */
