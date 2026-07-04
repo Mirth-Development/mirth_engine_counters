@@ -6,7 +6,7 @@ use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
 
-/// Used to apply a generic to the `start_value`, `current_value`, and `end_value` within the ticker struct.
+/// Used for implementing the `V` generic to define integer primitives a Ticker can store for its `start_value`, `end_value`, and `current_value`.
 ///
 /// Supports i8, i16, i32 for `start_value`, `current_value`, and `end_value` within Ticker.
 ///
@@ -80,7 +80,7 @@ impl TickerValue for i32 {
 
 
 
-/// Used to apply a generic to the `stored_time` and `time_interval` fields within the ticker struct.
+/// Used for implementing the `P` generic to define float types a Ticker can use for its precision in tracking time, `P` impacts the `time_interval` and `stored_time` fields.
 ///
 /// Supports f16, f32, and f64 for `stored_time` and `time_interval` fields within Ticker.
 ///
@@ -144,7 +144,7 @@ impl TickerPrecision for f64 {
 
 
 
-/// Used to handle conversions into the ticker's precision type `P`.
+/// Used for implementing the `F` generic which grants the ability for f16, f32, and f64 to be passed in for the float fields of a Ticker constructor, no matter the precision a ticker is set to.
 ///
 /// #### Why Is This Trait Necessary?
 /// Primarily purposed to ease Ticker construction by allowing any float literal to be used as input
