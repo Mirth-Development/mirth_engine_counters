@@ -22,9 +22,6 @@ fn main() {
         // Comment this add_system line to prevent the master ticker from spawning.
         .add_systems(Startup, spawn_custom_ticker)
 
-        // Comment this add_system line to prevent the variant tickers from spawning.
-        .add_systems(Startup, spawn_ticker_variants)
-
         // Don't touch this unless you want the tickers to NOT print their information.
         .add_systems(Update, print_ticker_information)
         .run();
@@ -33,103 +30,20 @@ fn main() {
 fn spawn_custom_ticker(mut commands: Commands) {
 
     // Change the fields to whatever you want to test any kind of ticker.
-    commands.spawn(Ticker::<i32, f32>::new(
+    // Remember to declare mutability if you want to make use of methods that change the ticker's
+    // fields, or you can make use of the copy constructors.
+    let ticker: Ticker<i8, f16> = Ticker::new(
         0,
         5,
-        25,
-        1.0,
-        true,
-        true,
-        true,
-        TickerBehavior::MutLooper,
-    ));
-}
-
-fn spawn_ticker_variants(mut commands: Commands) {
-
-    // LOOPER VARIATIONS
-    commands.spawn(Ticker::<i8, f16>::new_looper(
-        0,
         100,
         1.0,
-        true
-    ));
-    commands.spawn(Ticker::<i16, f32>::new_looper_custom(
-        50,
-        20,
-        -50,
-        0.5,
-        false,
-        false,
-    ));
-
-
-    // MUTLOOPER VARIATIONS
-    commands.spawn(Ticker::<i32, f16>::new_mut_looper(
-        0,
-        10,
-        0.1,
-        true
-    ));
-    commands.spawn(Ticker::<i16, f32>::new_mut_looper_custom(
-        1000,
-        500,
-        0,
-        5.0,
         false,
         true,
-    ));
-
-
-    // ONESHOT VARIATIONS
-    commands.spawn(Ticker::<i32, f32>::new_oneshot(
-        0,
-        100_000,
-        10.0,
-        true
-    ));
-    commands.spawn(Ticker::<i8, f64>::new_oneshot_custom(
-        -10,
-        0,
-        10,
-        0.25,
         true,
-        false,
-    ));
+        TickerBehavior::Looper,
+    );
 
-
-    // MUTONESHOT VARIATIONS
-    commands.spawn(Ticker::<i16, f16>::new_mut_oneshot(
-        0,
-        30_000,
-        1.0,
-        true
-    ));
-    commands.spawn(Ticker::<i32, f32>::new_mut_oneshot_custom(
-        100,
-        75,
-        0,
-        0.016,
-        false,
-        true,
-    ));
-
-
-    // FREEZING VARIATIONS
-    commands.spawn(Ticker::<i32, f16>::new_freezing(
-        0,
-        50,
-        2.5,
-        false
-    ));
-    commands.spawn(Ticker::<i32, f64>::new_freezing_custom(
-        -100_000,
-        -100_000,
-        100_000,
-        1.0,
-        true,
-        true,
-    ));
+    commands.spawn(ticker);
 }
 
 fn print_ticker_information(
