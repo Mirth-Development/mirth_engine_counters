@@ -895,8 +895,8 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ) -> Self {
         Self {
             start_value:                ticker.start_value(),
-            current_value:              ticker.start_value(),
-            end_value:                  ticker.start_value(),
+            current_value:              ticker.current_value(),
+            end_value:                  ticker.end_value(),
             time_interval:              ticker.time_interval(),
             stored_time:                ticker.stored_time(),
             is_paused:                  ticker.is_paused(),
@@ -920,8 +920,8 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ) -> Self {
         Self {
             start_value:                ticker.start_value(),
-            current_value:              ticker.start_value(),
-            end_value:                  ticker.start_value(),
+            current_value:              ticker.current_value(),
+            end_value:                  ticker.end_value(),
             time_interval:              ticker.time_interval(),
             stored_time:                ticker.stored_time(),
             is_paused:                  ticker.is_paused(),
