@@ -5,14 +5,12 @@ use half::f16;
 use crate::types::*;
 use crate::systems::*;
 
-/// A structure that acts as the main plugin for all the reflections and systems of the mirth_engine_tickers package.
+/// A structure that acts as the main plugin for all the reflections and systems of the mirth_engine_counters package.
 ///
 /// Will enable said reflections and systems depending on which features have been activated
 /// using the "cargo --features" command.  By default, reflections and systems are turned on.
-#[cfg(any(feature = "ticker_reflect", feature = "ticker_systems", feature = "ticker_serialize"))]
-pub struct TickersPlugin {}
-#[cfg(any(feature = "ticker_reflect", feature = "ticker_systems", feature = "ticker_serialize"))]
-impl Plugin for TickersPlugin {
+pub struct CountersPlugin {}
+impl Plugin for CountersPlugin {
     fn build(&self, app: &mut App) {
 
         // Reflecting Ticker Types

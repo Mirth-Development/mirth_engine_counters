@@ -29,9 +29,9 @@
             <div class="nav_box_1">
                 <a href="#what-are-the-datatypes-this-package-offers">What Are The Datatypes This Package Offers?</a>
 
-                <!-- ToC : TickersPlugin -->
+                <!-- ToC : CountersPlugin -->
                 <div class="nav_box_2">
-                    <a href="#tickersplugin">TickersPlugin</a>
+                    <a href="#countersplugin">CountersPlugin</a>
                 </div>
 
                 <!-- ToC : Ticker -->
@@ -49,7 +49,7 @@
                     <!-- ToC : Ticker Enums -->
                     <div class="nav_box_3">
                         <a href="#ticker-enums">Ticker Enums</a>
-                        <div class="nav_box_4"><a href="#tickerbehavior">TickerBehavior</a></div>
+                        <div class="nav_box_4"><a href="#tickerbehaviors">TickerBehaviors</a></div>
                     </div>
 
                     <!-- ToC : Ticker Methods -->
@@ -66,13 +66,13 @@
                         <div class="nav_box_4">
                             <a href="#ticker-constructor-methods">Ticker Constructor Methods</a>
                             <div class="nav_box_5"><a href="#default">default()</a></div>
-                            <div class="nav_box_5"><a href="#new-v-v-v-f-bool-bool-bool-tickerbehavior">new</a></div>
+                            <div class="nav_box_5"><a href="#new-v-v-v-f-bool-bool-bool-tickerbehaviors">new</a></div>
                             <div class="nav_box_5"><a href="#new-looper-v-v-f-bool">new_looper</a></div>
                             <div class="nav_box_5"><a href="#new-looper-custom-v-v-v-f-bool-bool">new_looper_custom</a></div>
                             <div class="nav_box_5"><a href="#new-oneshot-v-v-f-bool">new_oneshot</a></div>
                             <div class="nav_box_5"><a href="#new-oneshot-custom-v-v-v-f-bool-bool">new_oneshot_custom</a></div>
                             <div class="nav_box_5"><a href="#new-copy-ticker">new_copy</a></div>
-                            <div class="nav_box_5"><a href="#new-copy-with-behavior-change-ticker-tickerbehavior">new_copy_with_behavior_change</a></div>
+                            <div class="nav_box_5"><a href="#new-copy-with-behavior-change-ticker-tickerbehaviors">new_copy_with_behavior_change</a></div>
                         </div>
 
                         <!-- ToC : Ticker Getter Methods -->
@@ -104,7 +104,7 @@
                             <div class="nav_box_5"><a href="#tick-down">tick_down</a></div>
                             <div class="nav_box_5"><a href="#start-handling-time-spikes">start_handling_time_spikes</a></div>
                             <div class="nav_box_5"><a href="#stop-handling-time-spikes">stop_handling_time_spikes</a></div>
-                            <div class="nav_box_5"><a href="#set-behavior-tickerbehavior">set_behavior</a></div>
+                            <div class="nav_box_5"><a href="#set-behavior-tickerbehaviors">set_behavior</a></div>
                         </div>
 
                         <!-- ToC : Ticker Equality Methods -->
@@ -194,16 +194,16 @@
                     <ol>
                         <li>Add the package to your project with the default features disabled, then explicitly choose which features you want.
                             <ul>
-                                <li><code class="list_header">ticker_reflect</code> : Will cause all ticker types to reflect. Will add the bevy_reflect dependency and allow for the Tickers plugin to be usable.</li>
-                                <li><code class="list_header">ticker_systems</code> : Will turn on all systems for every ticker type. Will add the bevy_time dependency and allow for the Tickers plugin to be usable.</li>
+                                <li><code class="list_header">ticker_reflect</code> : Will cause all ticker types to reflect. This will add the bevy_reflect dependency.</li>
+                                <li><code class="list_header">ticker_systems</code> : Will turn on all systems for every ticker type. This will add the bevy_time dependency.</li>
                                 <li>
-                                    <code class="list_header">ticker_serialize</code> : Will make it so that ticker types can be serialized and deserialized. Will enable ticker_reflect, add the serde dependency, and allow for the Tickers plugin to be usable.
+                                    <code class="list_header">ticker_serialize</code> : Will make it so that ticker types can be serialized and deserialized. This will enable ticker_reflect and add the serde dependency.
                                     <pre><code>cargo add mirth_engine_tickers --no-default-features --features ticker_reflect, ticker_systems, ticker_serialize</code></pre>
                                 </li>
                             </ul>
                         </li>
                         <li>If you added any of the features, add <code>.add_plugin(Tickers{})</code> to your Bevy app.</li>
-                        <li>You can now make use of the datatypes that this package offers.</li>
+                        <li>You can now make use of the datatypes that this package offers.  The CountersPlugin requires at least 1 system, reflect, or serialize feature to be enabled. </li>
                     </ol>
                 </div>
 
@@ -214,7 +214,7 @@
                         <li>Add the package to your project with the default features disabled.
                             <pre><code>cargo add mirth_engine_tickers --no-default-features</code></pre>
                         </li>
-                        <li>You can now make use of the datatypes that this package offers, but you will need to create ticking systems, reflection registrations, and serialization capability yourself.</li>
+                        <li>You can now make use of the datatypes that this package offers, but you will need to implement ticking systems, reflection registrations, and serialization capability yourself.</li>
                     </ol>
                 </div>
 
@@ -226,16 +226,16 @@
             <div class="block_1">
                 <h1 id="what-are-the-datatypes-this-package-offers">What Are The Datatypes This Package Offers?</h1>
 
-                <!-- Tickers Plugin -->
+                <!-- Counters Plugin -->
                 <div class="block_2">
-                    <h2 id="tickersplugin">TickersPlugin</h2>
-                    <p>A struct acting as a Bevy plugin used to enable ticker systems and reflections for ticker types.  Use <code>.add_plugin(Tickers{})</code> inside a Bevy app if you wish to make use of said systems and reflections.</p>
+                    <h2 id="countersplugin">CountersPlugin</h2>
+                    <p>A struct acting as a Bevy plugin used to enable systems and reflections for types offered in this package.  Use <code>.add_plugin(CountersPlugin{})</code> inside a Bevy app if you wish to make use of said systems and reflections.</p>
                 </div>
 
                 <!-- Ticker Struct -->
                 <div class="block_2">
                     <h2 id="ticker">Ticker</h2>
-                    <p>In short, Ticker is a struct used to track the time between events and uses the types TickerValue, TickerPrecision, TickerFloatBridge, and TickerBehavior to support itself.</p>
+                    <p>In short, Ticker is a struct used to track the time between events and uses the types TickerValue, TickerPrecision, TickerFloatBridge, and TickerBehaviors to support itself.</p>
                     <p>In long, Ticker is a struct that can be used to create self-contained counters that advance a value (<code>current_value</code>) between two boundaries (<code>start_value</code> and <code>end_value</code>) at a fixed or dynamic rate, driven by calls to the <code>.tick()</code> method. Depending on its <code>behavior</code>, a ticker can loop back to <code>start_value</code> when it reaches a boundary, stop at the boundary it hits, or become locked in place once it reaches <code>end_value</code>.
                     <p>"Time" here is intentionally generic — <code>.tick()</code> doesn't assume seconds, frames, or any specific unit. It just compares whatever delta you feed <code>.tick()</code> against <code>time_interval</code> and advances <code>current_value</code> accordingly, which is what lets the same ticker logic drive a frame-timed cooldown, a world clock, or anything else that changes over some unit of "time".</p>
                     <p>A ticker's unit of time will be equal to the unit of the number you pass into its .tick() call(s).</p>
@@ -263,27 +263,31 @@
                         <li><code>Ticker&lt;i16, f64&gt;</code> : 179+ Bits</li>
                         <li><code>Ticker&lt;i32, f64&gt;</code> : 227+ Bits</li>
                     </ul>
-                    <p>The "+" in the bit count is to recognize that the behavior field holds an enum value, and I have no idea how many bits an enum declaration represents.</p>
+                    <p>The "+" in the bit count is to recognize that the <code>behavior</code> field holds an enum value, and I have no idea how many bits an enum declaration represents.</p>
                     <br>
 
                     <p><b>What Exactly is Mutable in Tickers?</b></p>
-                    <p>First off, a ticker should always be declared with the <code>mut</code> keyword.  We do this since tickers are purposed to tick, and ticking always has the potential to change <code>current_value</code> and <code>stored_time</code>.  From there, the actual mutability of a ticker's fields is dependent on its behavior.  Here is some info regarding such a thing:</p>
+                    <p>First off, a ticker should always be declared with the <code>mut</code> keyword.  We do this since tickers are purposed to tick, and ticking always has the potential to change <code>current_value</code> and <code>stored_time</code>.  From there, the actual mutability of a ticker's fields is dependent on its <code>behavior</code>.  Here is some info regarding such a thing:</p>
                     <ul>
-                        <li><b><code>TickerBehavior is Mutable</code></b>
+                        <li><b><code>Behavior is Mutable</code></b>
                             <ul>
                                 <li>Every field besides <code>stored_time</code> can be manipulated directly.</li>
                                 <li><code>stored_time</code> can be changed indirectly through the <code>.hard_reset()</code> method.</li>
+                                <li><code>stored_time</code> and <code>current_value</code> will be changed indirectly through ticking.  How and when these fields change is based on the ticker's boolean fields, what <code>behavior</code> the ticker is set to, and when <code>.tick()</code> gets called.
+                                    <ul>
+                                        <li>Do not regard <code>current_value</code> and <code>stored_time</code>'s change from <code>.tick()</code> as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
-                        <li><b><code>TickerBehavior is Immutable</code></b>
+                        <li><b><code>Behavior is Immutable</code></b>
                             <ul>
                                 <li>No fields can be changed directly.</li>
-                            </ul>
-                        </li>
-                        <li><b><code>TickerBehavior is Mutable or Immutable</code></b>
-                            <ul>
-                                <li><code>stored_time</code> and <code>current_value</code> will be changed indirectly through ticking.  How and when these fields change is based on the ticker's boolean fields, what <code>behavior</code> the ticker is set to, and when <code>.tick()</code> gets called.</li>
-                                <li>Do not regard <code>current_value</code> and <code>stored_time</code>'s change from <code>.tick()</code> as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.</li>
+                                <li><code>stored_time</code> and <code>current_value</code> will be changed indirectly through ticking.  How and when these fields change is based on the ticker's boolean fields, what <code>behavior</code> the ticker is set to, and when <code>.tick()</code> gets called.
+                                    <ul>
+                                        <li>Do not regard <code>current_value</code> and <code>stored_time</code>'s change from <code>.tick()</code> as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
                     </ul>
@@ -326,9 +330,9 @@
                     <div class="block_3">
                         <h3 id="ticker-enums">Ticker Enums</h3>
 
-                        <!-- TickerBehavior -->
+                        <!-- TickerBehaviors -->
                         <div class="block_4">
-                            <h4 id="tickerbehavior">TickerBehavior</h4>
+                            <h4 id="tickerbehaviors">TickerBehaviors</h4>
                             <p>An enum that establishes the different types of behavior a <code>Ticker</code> can use.  Classifications of behavior are as follows:</p>
                             <ul>
 
@@ -419,7 +423,7 @@
 
                             <!-- new -->
                             <div class="block_5">
-                                <h5 id="new-v-v-v-f-bool-bool-bool-tickerbehavior">new(V, V, V, F, bool, bool, bool, TickerBehavior)</h5>
+                                <h5 id="new-v-v-v-f-bool-bool-bool-tickerbehaviors">new(V, V, V, F, bool, bool, bool, TickerBehaviors)</h5>
                                 <p>Used for completely defining a custom ticker.</p>
                             </div>
 
@@ -496,8 +500,8 @@
 
                             <!-- new_copy_with_behavior_change -->
                             <div class="block_5">
-                                <h5 id="new-copy-with-behavior-change-ticker-tickerbehavior">new_copy_with_behavior_change(Ticker, TickerBehavior)</h5>
-                                <p>Creates a copy of a passed ticker with the only field change being the <code>behavior</code>, which is set to the passed <code>TickerBehavior</code> value.</p>
+                                <h5 id="new-copy-with-behavior-change-ticker-tickerbehaviors">new_copy_with_behavior_change(Ticker, TickerBehaviors)</h5>
+                                <p>Creates a copy of a passed ticker with the only field change being the <code>behavior</code>, which is set to the passed <code>TickerBehaviors</code> value.</p>
                                 <p>Useful for safely turning an immutable ticker into a mutable one — copy its values into a new mutable instance, then swap the immutable original out for the copy.</p>
                             </div>
 
@@ -652,8 +656,8 @@
 
                             <!-- set_behavior -->
                             <div class="block_5">
-                                <h5 id="set-behavior-tickerbehavior">.set_behavior(TickerBehavior)</h5>
-                                <p>Switches the behavior of a ticker to the passed <code>TickerBehavior</code> type.</p>
+                                <h5 id="set-behavior-tickerbehaviors">.set_behavior(TickerBehaviors)</h5>
+                                <p>Switches the behavior of a ticker to the passed <code>TickerBehaviors</code> type.</p>
                                 <p>Does not work for tickers with immutable behavior — use <code>new_copy_with_behavior_change</code> to simulate switching an immutable ticker to mutable behavior, then substitute the copy in for the original.</p>
                             </div>
 

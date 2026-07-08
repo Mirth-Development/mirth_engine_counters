@@ -223,7 +223,7 @@ impl TickerFloatBridge<f64> for f16 {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ticker_serialize", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "ticker_reflect", derive(Reflect), reflect(Clone, PartialEq))]
-pub enum TickerBehavior {
+pub enum TickerBehaviors {
     Looper,
     MutLooper,
     Oneshot,
@@ -337,16 +337,18 @@ pub enum TickerBehavior {
 ///
 /// #### What Exactly is Mutable in Tickers?
 /// First off, a ticker should always be declared with the `mut` keyword.  We do this since tickers are purposed to tick, and ticking always has the potential to change `current_value` and `stored_time`.
-/// From there, the actual mutability of a ticker is dependent on the mutability of its behavior.  Here is some info regarding such a thing:
+/// From there, the actual mutability of a ticker is dependent on the mutability of its `behavior`.  Here is some info regarding such a thing:
 ///
-/// - **`TickerBehavior is Mutable`**
+/// - **`Behavior is Mutable`**
 ///     - Every field besides stored_time can be manipulated directly.
 ///     - stored_time can be changed indirectly through the .hard_reset() method.
-/// - **`TickerBehavior is Immutable`**
-///     - No fields can be changed directly.
-/// - **`TickerBehavior is Mutable or Immutable`**
 ///     - stored_time and current_value will be changed indirectly through ticking.  How and when these fields change is based on the ticker's boolean fields, what behavior the ticker is set to, and when .tick() gets called.
-///     - Do not regard current_value and stored_time's change from .tick() as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.
+///         - Do not regard current_value and stored_time's change from .tick() as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.
+///
+/// - **`Behavior is Immutable`**
+///     - No fields can be changed directly.
+///     - stored_time and current_value will be changed indirectly through ticking.  How and when these fields change is based on the ticker's boolean fields, what behavior the ticker is set to, and when .tick() gets called.
+///         - Do not regard current_value and stored_time's change from .tick() as a factor of mutability.  Tickers are purposed to tick, hence the changing of such fields should always be expected unless a ticker is paused.
 ///
 /// ---
 ///
@@ -385,7 +387,7 @@ pub struct Ticker<V: TickerValue, P: TickerPrecision> {
     is_paused:                  bool,
     is_ticking_up:              bool,
     is_handling_time_spikes:    bool,
-    behavior:                   TickerBehavior,
+    behavior:                   TickerBehaviors,
 }
 
 impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
@@ -412,7 +414,7 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              true,
             is_handling_time_spikes:    true,
-            behavior:                   TickerBehavior::MutLooper,
+            behavior:                   TickerBehaviors::MutLooper,
         }
     }
 }
@@ -424,10 +426,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehavior::MutLooper);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehaviors::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
     pub fn new<F>(
         start_value:                V,
@@ -437,7 +439,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         is_paused:                  bool,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-        behavior:                   TickerBehavior,
+        behavior:                   TickerBehaviors,
     ) -> Self where F: TickerFloatBridge<P> {
 
         let min = start_value.min(end_value);
@@ -473,11 +475,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_looper(0, 100, 1.0, true);
     /// assert!(ticker.is_ticking_up());
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Looper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
     pub fn new_looper<F>(
         starting_value:             V,
@@ -499,7 +501,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Looper,
+            behavior:                   TickerBehaviors::Looper,
         }
     }
 
@@ -511,10 +513,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_looper_custom(0, 25, 100, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Looper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
     pub fn new_looper_custom<F>(
         start_value:                V,
@@ -542,7 +544,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Looper,
+            behavior:                   TickerBehaviors::Looper,
         }
     }
 
@@ -558,11 +560,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_looper(10, 0, 1.0, true);
     /// assert!(ticker.is_ticking_down());
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
     pub fn new_mut_looper<F>(
         starting_value:             V,
@@ -584,7 +586,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::MutLooper,
+            behavior:                   TickerBehaviors::MutLooper,
         }
     }
 
@@ -596,10 +598,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 50, 100, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
     pub fn new_mut_looper_custom<F>(
         start_value:                V,
@@ -627,7 +629,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::MutLooper,
+            behavior:                   TickerBehaviors::MutLooper,
         }
     }
 
@@ -644,10 +646,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_oneshot(0, 10, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Oneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
     pub fn new_oneshot<F>(
         starting_value:             V,
@@ -669,7 +671,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Oneshot,
+            behavior:                   TickerBehaviors::Oneshot,
         }
     }
 
@@ -682,10 +684,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_oneshot_custom(0, 5, 10, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Oneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
     pub fn new_oneshot_custom<F>(
         start_value:                V,
@@ -713,7 +715,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Oneshot,
+            behavior:                   TickerBehaviors::Oneshot,
         }
     }
 
@@ -730,10 +732,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot(0, 100, 2.0, false);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutOneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
     pub fn new_mut_oneshot<F>(
         starting_value:             V,
@@ -755,7 +757,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::MutOneshot,
+            behavior:                   TickerBehaviors::MutOneshot,
         }
     }
 
@@ -768,10 +770,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot_custom(10, 20, 30, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutOneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
     pub fn new_mut_oneshot_custom<F>(
         start_value:                V,
@@ -799,7 +801,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::MutOneshot,
+            behavior:                   TickerBehaviors::MutOneshot,
         }
     }
 
@@ -816,10 +818,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_freezing(0, 100, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Freezing);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
     pub fn new_freezing<F>(
         starting_value:             V,
@@ -841,7 +843,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Freezing,
+            behavior:                   TickerBehaviors::Freezing,
         }
     }
 
@@ -854,10 +856,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_freezing_custom(0, 0, 10, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Freezing);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
     pub fn new_freezing_custom<F>(
         start_value:                V,
@@ -885,7 +887,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up,
             is_handling_time_spikes,
-            behavior:                   TickerBehavior::Freezing,
+            behavior:                   TickerBehaviors::Freezing,
         }
     }
 
@@ -907,7 +909,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     }
 
     /// Creates a copy of the passed ticker with the only field change being the behavior that will
-    /// be set to the TickerBehavior type that is passed in.
+    /// be set to the TickerBehaviors type that is passed in.
     ///
     /// #### What's The Point of This Constructor?
     /// Besides being able to replicate a ticker's current values with a new behavior, the main usage
@@ -916,7 +918,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// preserves values and manages the mutability switch with a separate instance (the copy).
     pub fn new_copy_with_behavior_change(
         ticker: Ticker<V, P>,
-        ticker_behavior: TickerBehavior,
+        ticker_behavior: TickerBehaviors,
     ) -> Self {
         Self {
             start_value:                ticker.start_value(),
@@ -1106,17 +1108,17 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         self.is_handling_time_spikes
     }
 
-    /// Returns the TickerBehavior type of the ticker.
+    /// Returns the TickerBehaviors type of the ticker.
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_looper(0, 10, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
     #[inline]
-    pub fn behavior(&self) -> TickerBehavior {
+    pub fn behavior(&self) -> TickerBehaviors {
         self.behavior
     }
 
@@ -1141,10 +1143,10 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// #### What If I Want Something Instead of None?
     /// Use `.unwrap_or(INSERT_WHATEVER_HERE)` after the call to replace `None` with a value you want.
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// // current_value is set to 6, so there is no 2nd digit in current_value
-    /// let ticker = Ticker::<i32, f32>::new(0, 6, 100, 1.0, false, true, true, TickerBehavior::Looper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 6, 100, 1.0, false, true, true, TickerBehaviors::Looper);
     /// assert_eq!(ticker.digit(2).unwrap_or(0), 0);
     /// assert_eq!(ticker.digit(1).unwrap(), 6);
     /// ```
@@ -1153,9 +1155,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// Basic digit extraction across multiple places:
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 1234, 10000, 1.0, false, true, true, TickerBehavior::Looper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 1234, 10000, 1.0, false, true, true, TickerBehaviors::Looper);
     ///
     /// assert_eq!(ticker.digit(1), Some(4)); // ones place
     /// assert_eq!(ticker.digit(2), Some(3)); // tens place
@@ -1166,9 +1168,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// The ones place always exists, even when `current_value` is `0`:
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 0, 100, 1.0, false, true, true, TickerBehavior::Looper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 0, 100, 1.0, false, true, true, TickerBehaviors::Looper);
     /// assert_eq!(ticker.digit(1), Some(0));
     /// assert_eq!(ticker.digit(2), None);
     /// ```
@@ -1176,7 +1178,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// Negative values are handled the same as positive ones, since `digit` operates on
     /// the absolute value of `current_value`:
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let ticker = Ticker::<i32, f32>::new_looper_custom(-100, -42, 0, 1.0, false, true);
     /// assert_eq!(ticker.digit(1), Some(2));
@@ -1187,18 +1189,18 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// A digit that exists but happens to be `0` returns `Some(0)`, distinguishing it from
     /// a digit that doesn't exist at all (`None`):
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 1003, 10000, 1.0, false, true, true, TickerBehavior::Looper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 1003, 10000, 1.0, false, true, true, TickerBehaviors::Looper);
     /// assert_eq!(ticker.digit(3), Some(0)); // hundreds place exists, and is 0
     /// assert_eq!(ticker.digit(5), None);    // ten-thousands place doesn't exist
     /// ```
     ///
     /// A `place` outside the supported `1..=10` range returns `None`:
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 42, 100, 1.0, false, true, true, TickerBehavior::Looper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 42, 100, 1.0, false, true, true, TickerBehaviors::Looper);
     /// assert_eq!(ticker.digit(0), None);
     /// assert_eq!(ticker.digit(11), None);
     /// ```
@@ -1438,7 +1440,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
-    /// Switches the behavior of a ticker to the passed TickerBehavior type.
+    /// Switches the behavior of a ticker to the passed TickerBehaviors type.
     ///
     /// #### Does This Work For Tickers That Are Immutable?
     /// No.  Use the `new_copy_with_behavior_change` constructor to change an immutable ticker with
@@ -1453,13 +1455,13 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_tickers::{Ticker, TickerBehavior};
+    /// use mirth_engine_tickers::{Ticker, TickerBehaviors};
     ///
     /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 10, 1.0, true, true);
-    /// ticker.set_behavior(TickerBehavior::Oneshot);
-    /// assert_eq!(ticker.behavior(), TickerBehavior::Oneshot);
+    /// ticker.set_behavior(TickerBehaviors::Oneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     #[inline]
-    pub fn set_behavior(&mut self, new_behavior: TickerBehavior) {
+    pub fn set_behavior(&mut self, new_behavior: TickerBehaviors) {
         if self.is_mutable() {
             self.behavior = new_behavior;
         }
@@ -1993,8 +1995,8 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
                 // LOOPER LOGIC
                 // Assign current_value to its new host and then reset it to the ticker's start_value
                 // if either of its boundaries - start_value and end_value - are hit.
-                TickerBehavior::Looper |
-                TickerBehavior::MutLooper => {
+                TickerBehaviors::Looper |
+                TickerBehaviors::MutLooper => {
                     self.current_value = new_value;
                     if self.current_value <= min || self.current_value >= max {
                         self.current_value = self.start_value;
@@ -2006,9 +2008,9 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
                 // Additionally, stored_time will be zeroed out if current_value hits end_value.  We
                 // do this wipe for stored_time since oneshotters and freezings are purposed to clear their
                 // time storage upon hitting their end destination.
-                TickerBehavior::Oneshot |
-                TickerBehavior::MutOneshot |
-                TickerBehavior::Freezing => {
+                TickerBehaviors::Oneshot |
+                TickerBehaviors::MutOneshot |
+                TickerBehaviors::Freezing => {
                     self.current_value = new_value.clamp(min, max);
                     if self.current_value == self.end_value {
                         self.stored_time = P::from_f64(0.0);
@@ -2037,11 +2039,11 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     #[inline]
     pub fn is_mutable(&self) -> bool {
         match self.behavior {
-            TickerBehavior::Looper     => false,
-            TickerBehavior::MutLooper  => true,
-            TickerBehavior::Oneshot    => false,
-            TickerBehavior::MutOneshot => true,
-            TickerBehavior::Freezing   => self.current_value != self.end_value,
+            TickerBehaviors::Looper     => false,
+            TickerBehaviors::MutLooper  => true,
+            TickerBehaviors::Oneshot    => false,
+            TickerBehaviors::MutOneshot => true,
+            TickerBehaviors::Freezing   => self.current_value != self.end_value,
         }
     }
 
