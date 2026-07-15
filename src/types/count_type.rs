@@ -1,7 +1,6 @@
 
 // Imports
 use bevy_ecs::prelude::*;
-use bevy_reflect::Reflect;
 use std::fmt::Display;
 use std::ops::{Add, Div, Rem, Sub};
 
@@ -67,11 +66,12 @@ impl CountValue for i32 {
 #[cfg_attr(feature = "count_serialize", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "count_reflect", derive(Reflect), reflect(Clone, PartialEq))]
 pub struct Count<V: CountValue> {
-    lower_bound:        V,
-    current_value:      V,
-    upper_bound:          V,
+    anchor:                 V,
+    lower_bound:            V,
+    upper_bound:            V,
+    current_value:          V,
     is_lower_bound_active:  bool,
-    is_upper_bound_active:    bool,
+    is_upper_bound_active:  bool,
 }
 
 impl<V: CountValue> Default for Count<V> {
@@ -79,11 +79,12 @@ impl<V: CountValue> Default for Count<V> {
     ///
     fn default() -> Self {
         Self {
-            lower_bound:        V::from_i32(0),
-            current_value:      V::from_i32(0),
-            upper_bound:          V::MAX,
+            anchor:                 V::from_i32(0),
+            lower_bound:            V::MIN,
+            upper_bound:            V::MAX,
+            current_value:          V::from_i32(0),
             is_lower_bound_active:  true,
-            is_upper_bound_active:    true,
+            is_upper_bound_active:  true,
         }
     }
 }
@@ -93,25 +94,31 @@ impl<V: CountValue> Count<V> {
     // ##################################### CONSTRUCTORS ######################################## //
     /// PANIC EVALUATION WILL HAVE TO ACCOUNT FOR WHICH BOUNDARIES ARE ACTIVE
     pub fn new(
-        lower_bound:        V,
-        current_value:      V,
-        upper_bound:          V,
+        anchor:                 V,
+        lower_bound:            V,
+        upper_bound:            V,
+        current_value:          V,
         is_lower_bound_active:  bool,
-        is_upper_bound_active:    bool,
+        is_upper_bound_active:  bool,
     ) -> Self {
 
+        // MIN AND MAX SHOULDN'T BE CALCULATED BY MIN/MAX FUNCTIONS!  A PANIC SHOULD OCCUR ON CONSTRUCTION
+        // IF THE LOWER BOUND IS GREATER THAN THE UPPER BOUND OR IF THE UPPER BOUND IS LESS THAN THE LOWER
+        // BOUND!
         let min = lower_bound.min(upper_bound);
         let max = lower_bound.max(upper_bound);
 
-        // Panic Evaluators
+        // PANIC SHOULD OCCUR IF CURRENT_VALUE IS NOT WITHIN BOUNDS!  NO NEED FOR THE ADDITIONAL VALUE
+        // CHECKS WITHIN RANGE!
         check_if_value_is_within_range(lower_bound, V::MIN, V::MAX);
         check_if_value_is_within_range(current_value, min, max);
         check_if_value_is_within_range(upper_bound, V::MIN, V::MAX);
 
         Self {
+            anchor,
             lower_bound,
-            current_value,
             upper_bound,
+            current_value,
             is_lower_bound_active,
             is_upper_bound_active,
         }
@@ -124,20 +131,26 @@ impl<V: CountValue> Count<V> {
 
     ///
     #[inline]
+    pub fn anchor(&self) -> V {
+        self.anchor
+    }
+
+    ///
+    #[inline]
     pub fn lower_bound(&self) -> V {
         self.lower_bound
     }
 
     ///
     #[inline]
-    pub fn current_value(&self) -> V {
-        self.current_value
+    pub fn upper_bound(&self) -> V {
+        self.upper_bound
     }
 
     ///
     #[inline]
-    pub fn upper_bound(&self) -> V {
-        self.upper_bound
+    pub fn current_value(&self) -> V {
+        self.current_value
     }
 
     ///
@@ -194,6 +207,21 @@ impl<V: CountValue> Count<V> {
     // ##################################### SETTERS ########################################## //
 
     ///
+    pub fn set_anchor(&mut self, value: V) {
+
+        // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
+        let passed_value: V = value.clamp(V::MIN, V::MAX);
+
+        // Determine the active bounds.
+        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
+        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+
+        // Reassign anchor to the clamped passed value that is following the active bounds.
+        self.anchor = passed_value.clamp(active_lower_bound, active_upper_bound);
+    }
+    
+    ///
     pub fn set_lower_bound(&mut self, value: V) {
 
         // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
@@ -213,7 +241,7 @@ impl<V: CountValue> Count<V> {
             self.lower_bound = passed_value;
         }
 
-        // If both bounds are active, clamp current_value to their range.
+        // If both bounds are active, clamp current_value and anchor to their range.
         // If the lower bound is active and current_value is below it, reassign current_value to the lower_bound value.
         if self.is_lower_bound_active && self.is_upper_bound_active {
             self.current_value = self.current_value.clamp(self.lower_bound, self.upper_bound);
@@ -252,21 +280,6 @@ impl<V: CountValue> Count<V> {
         else if self.is_lower_bound_active && (self.current_value < self.lower_bound){
             self.current_value = self.lower_bound;
         }
-    }
-
-    ///
-    pub fn set_current_value(&mut self, value: V) {
-
-        // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
-        let passed_value: V = value.clamp(V::MIN, V::MAX);
-
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Reassign current_value to the clamped passed value that is following the active bounds.
-        self.current_value = passed_value.clamp(active_lower_bound, active_upper_bound);
     }
 
     ///
@@ -328,6 +341,21 @@ impl<V: CountValue> Count<V> {
         else if self.is_upper_bound_active && (self.current_value > self.upper_bound){
             self.current_value = self.upper_bound;
         }
+    }
+
+    ///
+    pub fn set_current_value(&mut self, value: V) {
+
+        // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
+        let passed_value: V = value.clamp(V::MIN, V::MAX);
+
+        // Determine the active bounds.
+        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
+        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+
+        // Reassign current_value to the clamped passed value that is following the active bounds.
+        self.current_value = passed_value.clamp(active_lower_bound, active_upper_bound);
     }
 
     ///
