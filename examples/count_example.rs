@@ -19,9 +19,10 @@ fn main() {
 fn spawn_custom_count(mut commands: Commands) {
 
     let mut count: Count<i8> = Count::new(
+        10,
         0,
-        5,
         100,
+        20,
         true,
         true
     );
