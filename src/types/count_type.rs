@@ -4,11 +4,12 @@ use bevy_ecs::prelude::*;
 use bevy_reflect::prelude::*;
 use std::fmt::Display;
 use std::ops::{Add, Div, Rem, Sub};
+use half::f16;
 
 ///
 pub trait CountValue:
-Copy                    // CountValue types are integers, which means they're safe to copy.
-+ Ord                   // CountValue types are integers, hence Ord is necessary for comparison.
+Copy                    // CountValue types are safe to copy.
++ PartialOrd            // Every supported type (integer or float) can be compared.
 + Display               // Making it so values can be printed to the console.
 + Add<Output = Self>
 + Sub<Output = Self>
@@ -20,50 +21,101 @@ Copy                    // CountValue types are integers, which means they're sa
 {
     const MIN: Self;
     const MAX: Self;
-    fn absolute(self)               -> Self;
-    fn sat_add(self, value: Self)   -> Self;
-    fn as_f64(self)                 -> f64;
-    fn as_i8(self)                  -> i8;
-    fn as_i64(self)                 -> i64;
-    fn from_f64(value: f64)         -> Self;
-    fn from_i32(val: i32)           -> Self;
+    fn absolute(self)                          -> Self;
+    fn sat_add(self, value: Self)              -> Self;
+    fn count_min(self, other: Self)            -> Self;
+    fn count_max(self, other: Self)            -> Self;
+    fn count_clamp(self, min: Self, max: Self) -> Self;
+    fn is_nan(self)                            -> bool;
+    fn as_f64(self)                            -> f64;
+    fn as_i8(self)                             -> i8;
+    fn as_i64(self)                            -> i64;
+    fn from_f64(value: f64)                    -> Self;
+    fn from_i32(val: i32)                      -> Self;
 }
 
 impl CountValue for i8 {
-    const MIN: Self                 = i8::MIN + 1;
-    const MAX: Self                 = i8::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i8 }
-    fn from_i32(value: i32)         -> Self { value as i8 }
+    const MIN: Self                            = i8::MIN + 1;
+    const MAX: Self                            = i8::MAX;
+    fn absolute(self)                          -> Self { self.abs() }
+    fn sat_add(self, value: Self)              -> Self { self.saturating_add(value) }
+    fn count_min(self, other: Self)            -> Self { self.min(other) }
+    fn count_max(self, other: Self)            -> Self { self.max(other) }
+    fn count_clamp(self, min: Self, max: Self) -> Self { self.clamp(min, max) }
+    fn is_nan(self)                            -> bool { false }
+    fn as_f64(self)                            -> f64  { self as f64 }
+    fn as_i8(self)                             -> i8   { self }
+    fn as_i64(self)                            -> i64  { self as i64 }
+    fn from_f64(value: f64)                    -> Self { value as i8 }
+    fn from_i32(value: i32)                    -> Self { value as i8 }
 }
 
 impl CountValue for i16 {
-    const MIN: Self                 = i16::MIN + 1;
-    const MAX: Self                 = i16::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self as i8 }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i16 }
-    fn from_i32(value: i32)         -> Self { value as i16 }
+    const MIN: Self                            = i16::MIN + 1;
+    const MAX: Self                            = i16::MAX;
+    fn absolute(self)                          -> Self { self.abs() }
+    fn sat_add(self, value: Self)              -> Self { self.saturating_add(value) }
+    fn count_min(self, other: Self)            -> Self { self.min(other) }
+    fn count_max(self, other: Self)            -> Self { self.max(other) }
+    fn count_clamp(self, min: Self, max: Self) -> Self { self.clamp(min, max) }
+    fn is_nan(self)                            -> bool { false }
+    fn as_f64(self)                            -> f64  { self as f64 }
+    fn as_i8(self)                             -> i8   { self as i8 }
+    fn as_i64(self)                            -> i64  { self as i64 }
+    fn from_f64(value: f64)                    -> Self { value as i16 }
+    fn from_i32(value: i32)                    -> Self { value as i16 }
 }
 
 impl CountValue for i32 {
-    const MIN: Self                 = i32::MIN + 1;
-    const MAX: Self                 = i32::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self as i8 }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i32 }
-    fn from_i32(value: i32)         -> Self { value }
+    const MIN: Self                            = i32::MIN + 1;
+    const MAX: Self                            = i32::MAX;
+    fn absolute(self)                          -> Self { self.abs() }
+    fn sat_add(self, value: Self)              -> Self { self.saturating_add(value) }
+    fn count_min(self, other: Self)            -> Self { self.min(other) }
+    fn count_max(self, other: Self)            -> Self { self.max(other) }
+    fn count_clamp(self, min: Self, max: Self) -> Self { self.clamp(min, max) }
+    fn is_nan(self)                            -> bool { false }
+    fn as_f64(self)                            -> f64  { self as f64 }
+    fn as_i8(self)                             -> i8   { self as i8 }
+    fn as_i64(self)                            -> i64  { self as i64 }
+    fn from_f64(value: f64)                    -> Self { value as i32 }
+    fn from_i32(value: i32)                    -> Self { value }
 }
+
+
+impl CountValue for f16 {
+    const MIN: Self                            = f16::MIN;
+    const MAX: Self                            = f16::MAX;
+    fn absolute(self)                          -> Self { if self < f16::from_f32(0.0) { -self } else { self } }
+    fn sat_add(self, value: Self)              -> Self { (self + value).clamp(Self::MIN, Self::MAX) }
+    fn count_min(self, other: Self)            -> Self { self.min(other) }
+    fn count_max(self, other: Self)            -> Self { self.max(other) }
+    fn count_clamp(self, min: Self, max: Self) -> Self { self.clamp(min, max) }
+    fn is_nan(self)                            -> bool { self.is_nan() }
+    fn as_f64(self)                            -> f64  { self.to_f64() }
+    fn as_i8(self)                             -> i8   { self.to_f64() as i8 }
+    fn as_i64(self)                            -> i64  { self.to_f64() as i64 }
+    fn from_f64(value: f64)                    -> Self { f16::from_f64(value) }
+    fn from_i32(value: i32)                    -> Self { f16::from_f64(value as f64) }
+}
+
+impl CountValue for f32 {
+    const MIN: Self                            = f32::MIN;
+    const MAX: Self                            = f32::MAX;
+    fn absolute(self)                          -> Self { self.abs() }
+    fn sat_add(self, value: Self)              -> Self { (self + value).clamp(Self::MIN, Self::MAX) }
+    fn count_min(self, other: Self)            -> Self { self.min(other) }
+    fn count_max(self, other: Self)            -> Self { self.max(other) }
+    fn count_clamp(self, min: Self, max: Self) -> Self { self.clamp(min, max) }
+    fn is_nan(self)                            -> bool { self.is_nan() }
+    fn as_f64(self)                            -> f64  { self as f64 }
+    fn as_i8(self)                             -> i8   { self as i8 }
+    fn as_i64(self)                            -> i64  { self as i64 }
+    fn from_f64(value: f64)                    -> Self { value as f32 }
+    fn from_i32(value: i32)                    -> Self { value as f32 }
+}
+
+
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "count_serialize", derive(serde::Deserialize, serde::Serialize))]
@@ -74,6 +126,8 @@ pub enum CountMarkers {
     UpperBound,
     CurrentValue,
 }
+
+
 
 ///
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
@@ -106,7 +160,7 @@ impl<V: CountValue> Default for Count<V> {
 impl<V: CountValue> Count<V> {
 
     // ##################################### CONSTRUCTORS ######################################## //
-    /// PANIC EVALUATION WILL HAVE TO ACCOUNT FOR WHICH BOUNDARIES ARE ACTIVE
+    /// PANIC EVALUATION ACCOUNTS FOR WHICH BOUNDARIES ARE ACTIVE
     pub fn new(
         anchor:                 V,
         current_value:          V,
@@ -115,6 +169,13 @@ impl<V: CountValue> Count<V> {
         is_lower_bound_active:  bool,
         is_upper_bound_active:  bool,
     ) -> Self {
+
+        // PANIC EVALUATION
+        // Panic if a passed value for anchor, current_value, lower_bound, or upper_bound is NaN.
+        panic_if_is_nan("anchor", "constructing", anchor);
+        panic_if_is_nan("current_value", "constructing", current_value);
+        panic_if_is_nan("lower_bound", "constructing", lower_bound);
+        panic_if_is_nan("upper_bound", "constructing", upper_bound);
 
         // PANIC EVALUATION
         // Panic if either boundary is being constructed with literals that don't match their definition.
@@ -192,17 +253,25 @@ impl<V: CountValue> Count<V> {
     ///
     pub fn set_anchor(&mut self, value: V) {
 
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("anchor", "setting or adding", value);
+
         // Determine the active bounds.
         // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
         let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
         let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
 
         // Reassign anchor to the clamped passed value that is following the active bounds.
-        self.anchor = value.clamp(active_lower_bound, active_upper_bound);
+        self.anchor = value.count_clamp(active_lower_bound, active_upper_bound);
     }
 
     ///
     pub fn set_current_value(&mut self, value: V) {
+
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("current_value", "setting or adding", value);
 
         // Determine the active bounds.
         // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
@@ -210,14 +279,18 @@ impl<V: CountValue> Count<V> {
         let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
 
         // Reassign current_value to the clamped passed value that is following the active bounds.
-        self.current_value = value.clamp(active_lower_bound, active_upper_bound);
+        self.current_value = value.count_clamp(active_lower_bound, active_upper_bound);
     }
 
     ///
     pub fn set_lower_bound(&mut self, value: V) {
 
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("lower_bound", "setting or adding", value);
+
         // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
-        let passed_value: V = value.clamp(V::MIN, V::MAX);
+        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
 
         // If the passed value is greater than the upper bound, PANIC.
         // Otherwise, assign the lower bound to the passed value.
@@ -240,8 +313,12 @@ impl<V: CountValue> Count<V> {
     ///
     pub fn set_lower_bound_with_swap(&mut self, value: V) {
 
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("lower_bound", "setting or adding", value);
+
         // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
-        let passed_value: V = value.clamp(V::MIN, V::MAX);
+        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
 
         // If the passed value is greater than the upper bound, than the lower bound
         // gets reassigned to the upper bound value and the new upper bound value will become the
@@ -265,8 +342,12 @@ impl<V: CountValue> Count<V> {
     ///
     pub fn set_upper_bound(&mut self, value: V) {
 
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("upper_bound", "setting or adding", value);
+
         // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
-        let passed_value: V = value.clamp(V::MIN, V::MAX);
+        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
 
         // If the passed value is greater than the lower bound, PANIC.
         // Otherwise, assign the upper bound to the passed value.
@@ -289,8 +370,12 @@ impl<V: CountValue> Count<V> {
     ///
     pub fn set_upper_bound_with_swap(&mut self, value: V) {
 
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("upper_bound", "setting or adding", value);
+
         // Pushing up/down the passed value to be within the acceptable range for the Count datatype.
-        let passed_value: V = value.clamp(V::MIN, V::MAX);
+        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
 
         // If the passed value is less than the lower bound, than the upper bound
         // gets reassigned to the lower bound value and the new lower bound value will become the
@@ -453,31 +538,54 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// PRESERVES POSITIVE/NEGATIVE IN DIFFERENCES TO INDICATE DIRECTION.
-    pub fn get_signed_difference(
+    /// Returns `to_marker`'s value minus `from_marker`'s value, preserving sign to indicate direction:
+    /// - **Positive Result**: `to_marker` sits to the right of (greater than) `from_marker`.
+    /// - **Negative Result**: `to_marker` sits to the left of (less than) `from_marker`.
+    /// - **Zero Result**: The two markers currently hold equal values.
+    pub fn get_signed_difference_as_i64(
         &self,
-        marker_1: CountMarkers,
-        marker_2: CountMarkers,
+        from_marker: CountMarkers,
+        to_marker: CountMarkers,
     ) -> i64 {
-        let value_of_marker_1: i64 = self.marker_value(marker_1).as_i64();
-        let value_of_marker_2: i64 = self.marker_value(marker_2).as_i64();
-        value_of_marker_1 - value_of_marker_2
+        let from_value: i64 = self.marker_value(from_marker).as_i64();
+        let to_value: i64 = self.marker_value(to_marker).as_i64();
+        to_value - from_value
+    }
+
+    /// Returns `to_marker`'s value minus `from_marker`'s value, preserving sign to indicate direction:
+    /// - **Positive Result**: `to_marker` sits to the right of (greater than) `from_marker`.
+    /// - **Negative Result**: `to_marker` sits to the left of (less than) `from_marker`.
+    /// - **Zero Result**: The two markers currently hold equal values.
+    pub fn get_signed_difference_as_f64(
+        &self,
+        from_marker: CountMarkers,
+        to_marker: CountMarkers,
+    ) -> f64 {
+        let from_value: f64 = self.marker_value(from_marker).as_f64();
+        let to_value: f64 = self.marker_value(to_marker).as_f64();
+        to_value - from_value
     }
 
     /// WILL ALWAYS RETURN A POSITIVE VALUE, THIS DOES INCLUDE THE POSSIBILITY OF 0.
-    pub fn get_absolute_difference(
+    pub fn get_absolute_difference_as_i64(
         &self,
         marker_1: CountMarkers,
         marker_2: CountMarkers,
     ) -> i64 {
+        let value_1: i64 = self.marker_value(marker_1).as_i64();
+        let value_2: i64 = self.marker_value(marker_2).as_i64();
+        (value_1 - value_2).abs()
+    }
 
-        let value_of_marker_1: V = self.marker_value(marker_1);
-        let value_of_marker_2: V = self.marker_value(marker_2);
-
-        let min: i64 = value_of_marker_1.min(value_of_marker_2).as_i64();
-        let max: i64 = value_of_marker_1.max(value_of_marker_2).as_i64();
-
-        max - min
+    /// WILL ALWAYS RETURN A POSITIVE VALUE, THIS DOES INCLUDE THE POSSIBILITY OF 0.
+    pub fn get_absolute_difference_as_f64(
+        &self,
+        marker_1: CountMarkers,
+        marker_2: CountMarkers,
+    ) -> f64 {
+        let value_1: f64 = self.marker_value(marker_1).as_f64();
+        let value_2: f64 = self.marker_value(marker_2).as_f64();
+        (value_1 - value_2).abs()
     }
 
     /// REMEMBER TO MENTION THAT STARTING_MARKER AND ENDING_MARKER CAN BE FLIPPED TO OBTAIN THE INVERSE PERCENTAGE!
@@ -514,6 +622,11 @@ impl<V: CountValue> Count<V> {
         starting_marker: CountMarkers,
         ending_marker: CountMarkers,
     ) -> V {
+
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("get_value_at_percentage", "getting", percentage);
+
         let start: f64 = self.marker_value(starting_marker).as_f64();
         let end: f64 = self.marker_value(ending_marker).as_f64();
         V::from_f64(((end - start) * percentage) + start)
@@ -564,8 +677,8 @@ impl<V: CountValue> Count<V> {
 
             // Both bounds are active, so we clamp current_value and anchor into the bounded range.
             (true, true) => {
-                self.current_value = self.current_value.clamp(self.lower_bound, self.upper_bound);
-                self.anchor = self.anchor.clamp(self.lower_bound, self.upper_bound);
+                self.current_value = self.current_value.count_clamp(self.lower_bound, self.upper_bound);
+                self.anchor = self.anchor.count_clamp(self.lower_bound, self.upper_bound);
             }
 
             // Only the lower bound is active, so we check to see if current_value or anchor is below it
@@ -623,6 +736,17 @@ fn panic_if_upper_bound_is_less_than_lower_bound<V: CountValue>(lower_bound: V, 
     if upper_bound > lower_bound {
         panic!(
             "{}[COUNT PANIC]{} You are constructing a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your upper_bound can not be less than your lower_bound.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
+///
+fn panic_if_is_nan<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V) {
+    if value.is_nan() {
+        panic!(
+            "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with NaN.
+            NaN is not a valid CountValue for any comparison, bound, or arithmetic operation.",
             "\x1b[31m", "\x1b[0m",
         );
     }
