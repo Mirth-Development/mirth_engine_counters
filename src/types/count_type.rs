@@ -21,7 +21,7 @@ Copy                    // CountValue types are safe to copy.
 + Sync                  // Needed for Bevy queries; also lets Counts be shared safely across threads.
 + 'static               // Needed for Bevy queries; also enforces that CountValue types own their data, with no borrowed lifetimes.
 {
-    ///
+    /// Text
     type Difference;
 
     /// Text
@@ -33,10 +33,16 @@ Copy                    // CountValue types are safe to copy.
     /// Text
     const IS_FLOAT: bool;
 
-    ///
+    /// Text
+    const EPSILON: Self;
+
+    /// Text
+    const MAX_FLOATING_PLACE: i8;
+
+    /// Text
     fn signed_difference(from: Self, to: Self) -> Self::Difference;
 
-    ///
+    /// Text
     fn absolute_difference(val_1: Self, val_2: Self) -> Self::Difference;
 
     /// Text
@@ -83,6 +89,10 @@ impl CountValue for u8 {
     const MAX: Self = u8::MAX;
 
     const IS_FLOAT: bool = false;
+
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -135,6 +145,10 @@ impl CountValue for u16 {
 
     const IS_FLOAT: bool = false;
 
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
+
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
 
@@ -185,6 +199,10 @@ impl CountValue for u32 {
     const MAX: Self = u32::MAX;
 
     const IS_FLOAT: bool = false;
+
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -237,6 +255,10 @@ impl CountValue for i8 {
 
     const IS_FLOAT: bool = false;
 
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
+
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
 
@@ -287,6 +309,10 @@ impl CountValue for i16 {
     const MAX: Self = i16::MAX;
 
     const IS_FLOAT: bool = false;
+
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -339,6 +365,10 @@ impl CountValue for i32 {
 
     const IS_FLOAT: bool = false;
 
+    const EPSILON: Self = 0;
+
+    const MAX_FLOATING_PLACE: i8 = 0;
+
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
 
@@ -390,6 +420,10 @@ impl CountValue for f16 {
 
     const IS_FLOAT: bool = true;
 
+    const EPSILON: Self = f16::from_f32_const(1e-3);
+
+    const MAX_FLOATING_PLACE: i8 = 2;
+
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { to.to_f32() - from.to_f32() }
 
@@ -440,6 +474,10 @@ impl CountValue for f32 {
     const MAX: Self = f32::MAX;
 
     const IS_FLOAT: bool = true;
+
+    const EPSILON: Self = 1e-5;
+
+    const MAX_FLOATING_PLACE: i8 = 4;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
