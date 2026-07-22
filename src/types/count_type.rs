@@ -36,6 +36,9 @@ Copy                    // CountValue types are safe to copy.
     /// Text
     const EPSILON: Self;
 
+    ///
+    const MAX_WHOLE_PLACE: i8;
+
     /// Text
     const MAX_FLOATING_PLACE: i8;
 
@@ -92,6 +95,8 @@ impl CountValue for u8 {
 
     const EPSILON: Self = 0;
 
+    const MAX_WHOLE_PLACE: i8 = 3;
+
     const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -146,6 +151,8 @@ impl CountValue for u16 {
     const IS_FLOAT: bool = false;
 
     const EPSILON: Self = 0;
+
+    const MAX_WHOLE_PLACE: i8 = 5;
 
     const MAX_FLOATING_PLACE: i8 = 0;
 
@@ -202,6 +209,8 @@ impl CountValue for u32 {
 
     const EPSILON: Self = 0;
 
+    const MAX_WHOLE_PLACE: i8 = 10;
+
     const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -256,6 +265,8 @@ impl CountValue for i8 {
     const IS_FLOAT: bool = false;
 
     const EPSILON: Self = 0;
+
+    const MAX_WHOLE_PLACE: i8 = 3;
 
     const MAX_FLOATING_PLACE: i8 = 0;
 
@@ -312,6 +323,8 @@ impl CountValue for i16 {
 
     const EPSILON: Self = 0;
 
+    const MAX_WHOLE_PLACE: i8 = 5;
+
     const MAX_FLOATING_PLACE: i8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -366,6 +379,8 @@ impl CountValue for i32 {
     const IS_FLOAT: bool = false;
 
     const EPSILON: Self = 0;
+
+    const MAX_WHOLE_PLACE: i8 = 10;
 
     const MAX_FLOATING_PLACE: i8 = 0;
 
@@ -422,6 +437,8 @@ impl CountValue for f16 {
 
     const EPSILON: Self = f16::from_f32_const(1e-3);
 
+    const MAX_WHOLE_PLACE: i8 = 5;
+
     const MAX_FLOATING_PLACE: i8 = 2;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -475,9 +492,11 @@ impl CountValue for f32 {
 
     const IS_FLOAT: bool = true;
 
-    const EPSILON: Self = 1e-5;
+    const EPSILON: Self = 1e-6;
 
-    const MAX_FLOATING_PLACE: i8 = 4;
+    const MAX_WHOLE_PLACE: i8 = 39;
+
+    const MAX_FLOATING_PLACE: i8 = 5;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -953,12 +972,13 @@ impl<V: CountValue> Count<V> {
     }
 
     ///
-    pub fn get_digit(
+    pub fn get_whole_digit(
         &self,
-        place: i8,
+        place: u8,
         marker: CountMarkers,
     ) -> Option<i8> {
 
+        if place <= V::MAX_WHOLE_PLACE
         let scaler: V = match place {
             1  => V::from_i64(1),
             2  => V::from_i64(10),
@@ -992,6 +1012,24 @@ impl<V: CountValue> Count<V> {
 
             _ => None,
         }
+    }
+
+    ///
+    pub fn get_floating_digit_in_memory(
+        &self,
+        place: i8,
+        marker: CountMarkers,
+    ) -> Option<i8> {
+
+    }
+
+    ///
+    pub fn get_floating_digit_with_epsilon(
+        &self,
+        place: i8,
+        marker: CountMarkers,
+    ) -> Option<i8> {
+
     }
 
     /// Returns `to_marker`'s value minus `from_marker`'s value, preserving sign to indicate direction:
