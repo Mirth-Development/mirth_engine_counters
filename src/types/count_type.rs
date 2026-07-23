@@ -37,10 +37,13 @@ Copy                    // CountValue types are safe to copy.
     const EPSILON: Self;
 
     ///
-    const MAX_WHOLE_PLACE: i8;
+    const MAX_WHOLE_PLACES: u8;
 
     /// Text
-    const MAX_FLOATING_PLACE: i8;
+    const MAX_FLOATING_PLACES: u8;
+
+    /// Text
+    const RELIABLE_FLOATING_PLACES: u8;
 
     /// Text
     fn signed_difference(from: Self, to: Self) -> Self::Difference;
@@ -50,6 +53,9 @@ Copy                    // CountValue types are safe to copy.
 
     /// Text
     fn absolute(self) -> Self;
+
+    /// Text
+    fn power_with_int(self, value: u32) -> Self;
 
     /// Text
     fn sat_add(self, value: Self) -> Self;
@@ -95,9 +101,11 @@ impl CountValue for u8 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 3;
+    const MAX_WHOLE_PLACES: u8 = 3;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -107,6 +115,9 @@ impl CountValue for u8 {
 
     fn absolute(self) -> Self
     { self }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -152,9 +163,11 @@ impl CountValue for u16 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 5;
+    const MAX_WHOLE_PLACES: u8 = 5;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -164,6 +177,9 @@ impl CountValue for u16 {
 
     fn absolute(self) -> Self
     { self }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -209,9 +225,11 @@ impl CountValue for u32 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 10;
+    const MAX_WHOLE_PLACES: u8 = 10;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -221,6 +239,9 @@ impl CountValue for u32 {
 
     fn absolute(self) -> Self
     { self }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -266,9 +287,11 @@ impl CountValue for i8 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 3;
+    const MAX_WHOLE_PLACES: u8 = 3;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -278,6 +301,9 @@ impl CountValue for i8 {
 
     fn absolute(self) -> Self
     { self.abs() }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -323,9 +349,11 @@ impl CountValue for i16 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 5;
+    const MAX_WHOLE_PLACES: u8 = 5;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -335,6 +363,9 @@ impl CountValue for i16 {
 
     fn absolute(self) -> Self
     { self.abs() }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -380,9 +411,11 @@ impl CountValue for i32 {
 
     const EPSILON: Self = 0;
 
-    const MAX_WHOLE_PLACE: i8 = 10;
+    const MAX_WHOLE_PLACES: u8 = 10;
 
-    const MAX_FLOATING_PLACE: i8 = 0;
+    const MAX_FLOATING_PLACES: u8 = 0;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -392,6 +425,9 @@ impl CountValue for i32 {
 
     fn absolute(self) -> Self
     { self.abs() }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.pow(value) }
 
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
@@ -437,9 +473,11 @@ impl CountValue for f16 {
 
     const EPSILON: Self = f16::from_f32_const(1e-3);
 
-    const MAX_WHOLE_PLACE: i8 = 5;
+    const MAX_WHOLE_PLACES: u8 = 5;
 
-    const MAX_FLOATING_PLACE: i8 = 2;
+    const MAX_FLOATING_PLACES: u8 = 8;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 2;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { to.to_f32() - from.to_f32() }
@@ -449,6 +487,9 @@ impl CountValue for f16 {
 
     fn absolute(self) -> Self
     { if self < f16::from_f32(0.0) { -self } else { self } }
+
+    fn power_with_int(self, value: u32) -> Self
+    { f16::from_f32(self.to_f32().powi(value as i32)) }
 
     fn sat_add(self, value: Self) -> Self
     { (self + value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
@@ -494,9 +535,11 @@ impl CountValue for f32 {
 
     const EPSILON: Self = 1e-6;
 
-    const MAX_WHOLE_PLACE: i8 = 39;
+    const MAX_WHOLE_PLACES: u8 = 39;
 
-    const MAX_FLOATING_PLACE: i8 = 5;
+    const MAX_FLOATING_PLACES: u8 = 45;
+
+    const RELIABLE_FLOATING_PLACES: u8 = 5;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
     { (to as Self::Difference) - (from as Self::Difference) }
@@ -506,6 +549,9 @@ impl CountValue for f32 {
 
     fn absolute(self) -> Self
     { self.abs() }
+
+    fn power_with_int(self, value: u32) -> Self
+    { self.powi(value as i32) }
 
     fn sat_add(self, value: Self) -> Self
     { (self + value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
@@ -978,58 +1024,209 @@ impl<V: CountValue> Count<V> {
         marker: CountMarkers,
     ) -> Option<i8> {
 
-        if place <= V::MAX_WHOLE_PLACE
-        let scaler: V = match place {
-            1  => V::from_i64(1),
-            2  => V::from_i64(10),
-            3  => V::from_i64(100),
-            4  => V::from_i64(1_000),
-            5  => V::from_i64(10_000),
-            6  => V::from_i64(100_000),
-            7  => V::from_i64(1_000_000),
-            8  => V::from_i64(10_000_000),
-            9  => V::from_i64(100_000_000),
-            10 => V::from_i64(1_000_000_000),
+        // If the wanted place exists within the given CountValue type, see if the digit exists and return it.
+        // If the wanted place does not exist within given CountValue type, return None.
+        if (place > 0) && (place <= V::MAX_WHOLE_PLACES) {
 
-            // Out-Of-Range Places
-            _  => return None,
-        };
+            let scaler: V = V::from_i64(10).power_with_int((place - 1) as u32);
+            let value: V = self.marker_value(marker).absolute();
 
-        // Count fields supports negatives, must flip to positive for calculation.
-        let value = self.marker_value(marker).absolute();
+            // The ones place always exists (even for a value of 0).
+            // Any other place only exists if the value is large enough to reach it.
+            let digit_exists: bool = (place == 1) || (value >= scaler);
 
-        // This looks more complicated than it needs to be because I attempted to make get_digit
-        // have float support - it failed miserably.  If I do end up one day coming back to it, then
-        // I'm going to need this match statement; trying to save myself later.
-        let is_whole_place: bool = (place == 1) || (value >= scaler);
-        match (V::IS_FLOAT, is_whole_place) {
-
-            // Integers/floats requesting whole digits.
-            (_, true) => {
-                let integer_part = (value / scaler).truncate();
+            // Return the digit if it exists, otherwise return None.
+            if digit_exists {
+                let integer_part: V = (value / scaler).truncate();
                 Some((integer_part % V::from_i64(10)).as_i8())
             }
-
-            _ => None,
+            else {
+                None
+            }
+        }
+        else {
+            None
         }
     }
 
+    /// Retrieves a specific decimal digit from the fractional part of a marker's value, exactly
+    /// as it is stored in memory — without accounting for floating-point representation noise.
     ///
+    /// `place` is 1-indexed from the decimal point (`1` = tenths, `2` = hundredths, etc.).
+    /// Returns `None` if `place` is `0` or exceeds `V::MAX_FLOATING_PLACES` for this type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// let count = Count::<f32>::new_with_active_bounds(0.0, 123.456, -1000.0, 1000.0);
+    ///
+    /// // 123.456 is stored as 123.45600128173828 (f32 can't represent 123.456 exactly),
+    /// // so digits reflect the actual stored value, not the literal as written.
+    /// assert_eq!(count.get_floating_digit_in_memory(1, CountMarkers::CurrentValue), Some(4));
+    /// assert_eq!(count.get_floating_digit_in_memory(2, CountMarkers::CurrentValue), Some(5));
+    /// assert_eq!(count.get_floating_digit_in_memory(3, CountMarkers::CurrentValue), Some(6));
+    /// assert_eq!(count.get_floating_digit_in_memory(4, CountMarkers::CurrentValue), Some(0));
+    /// assert_eq!(count.get_floating_digit_in_memory(5, CountMarkers::CurrentValue), Some(0));
+    /// assert_eq!(count.get_floating_digit_in_memory(6, CountMarkers::CurrentValue), Some(1));
+    /// assert_eq!(count.get_floating_digit_in_memory(7, CountMarkers::CurrentValue), Some(2));
+    /// assert_eq!(count.get_floating_digit_in_memory(8, CountMarkers::CurrentValue), Some(8));
+    /// ```
+    ///
+    /// A `place` of `0`, or one beyond the type's supported floating precision, returns `None`:
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// let count = Count::<f32>::new_with_active_bounds(0.0, 123.456, -1000.0, 1000.0);
+    ///
+    /// assert_eq!(count.get_floating_digit_in_memory(0, CountMarkers::CurrentValue), None);
+    /// assert_eq!(count.get_floating_digit_in_memory(200, CountMarkers::CurrentValue), None);
+    /// ```
+    ///
+    /// Integer `CountValue` types always return `None`, since `MAX_FLOATING_PLACES` is `0`:
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// let count = Count::<i32>::new_with_active_bounds(0, 42, -1000, 1000);
+    ///
+    /// assert_eq!(count.get_floating_digit_in_memory(1, CountMarkers::CurrentValue), None);
+    /// ```
     pub fn get_floating_digit_in_memory(
         &self,
-        place: i8,
+        place: u8,
         marker: CountMarkers,
     ) -> Option<i8> {
 
+        if (place > 0) && (place <= V::MAX_FLOATING_PLACES) {
+
+            let value: V = self.marker_value(marker).absolute();
+            let whole_part: V = value.truncate();
+
+            // Isolate just the fractional part of the value (e.g. 123.456 -> 0.456).
+            let mut working: V = value - whole_part;
+            let ten: V = V::from_i64(10);
+            let mut digit: V = V::from_i64(0);
+
+            // Shift the fractional part left one decimal digit at a time, extracting the
+            // integer part as the digit at that place and keeping only the remainder for
+            // the next iteration. This keeps `working` bounded within [0, 10) at every
+            // step, regardless of how large `place` is, avoiding overflow.
+            for _ in 0..place {
+                working = working * ten;
+                digit = working.truncate();
+                working = working - digit;
+            }
+
+            Some((digit % ten).as_i8())
+        }
+        else {
+            None
+        }
     }
 
+    /// # Examples
     ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// let count = Count::<f32>::new_with_active_bounds(0.0, 123.456, -1000.0, 1000.0);
+    ///
+    /// assert_eq!(count.get_floating_digit_with_epsilon(1, CountMarkers::CurrentValue), Some(4));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(2, CountMarkers::CurrentValue), Some(5));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(3, CountMarkers::CurrentValue), Some(6));
+    /// ```
+    ///
+    /// Representation noise pushing a fractional value just under the next whole-digit step
+    /// gets corrected, unlike [`get_floating_digit_in_memory`]:
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// let noisy_value: f32 = 0.299_999_95;
+    /// let count = Count::<f32>::new_with_active_bounds(0.0, noisy_value, -1000.0, 1000.0);
+    ///
+    /// assert_eq!(count.get_floating_digit_in_memory(1, CountMarkers::CurrentValue), Some(2));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(1, CountMarkers::CurrentValue), Some(3));
+    /// ```
+    ///
+    /// f16 Test:
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    /// use half::f16;
+    ///
+    /// let noisy_value: f16 = f16::from_f32(0.2999);
+    /// let count = Count::<f16>::new_with_active_bounds(
+    ///     f16::from_f32(0.0),
+    ///     noisy_value,
+    ///     f16::from_f32(-1000.0),
+    ///     f16::from_f32(1000.0),
+    /// );
+    ///
+    /// assert_eq!(count.get_floating_digit_in_memory(1, CountMarkers::CurrentValue), Some(2));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(1, CountMarkers::CurrentValue), Some(3));
+    /// ```
+    ///
+    /// Noise doesn't always sit at the first decimal place — here it only affects the
+    /// thousandths digit, and the correction is applied there without disturbing the
+    /// (already-correct) tenths and hundredths digits:
+    ///
+    /// ```
+    /// use mirth_engine_counters::{Count, CountMarkers};
+    ///
+    /// // Meant to represent 0.128, but stored with representation error affecting
+    /// // only the thousandths place.
+    /// let noisy_value: f32 = 0.127_999_99;
+    /// let count = Count::<f32>::new_with_active_bounds(0.0, noisy_value, -1000.0, 1000.0);
+    ///
+    /// // Tenths and hundredths already agree between both methods.
+    /// assert_eq!(count.get_floating_digit_in_memory(1, CountMarkers::CurrentValue), Some(1));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(1, CountMarkers::CurrentValue), Some(1));
+    /// assert_eq!(count.get_floating_digit_in_memory(2, CountMarkers::CurrentValue), Some(2));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(2, CountMarkers::CurrentValue), Some(2));
+    ///
+    /// // Only the thousandths digit needed correction.
+    /// assert_eq!(count.get_floating_digit_in_memory(3, CountMarkers::CurrentValue), Some(7));
+    /// assert_eq!(count.get_floating_digit_with_epsilon(3, CountMarkers::CurrentValue), Some(8));
+    /// ```
     pub fn get_floating_digit_with_epsilon(
         &self,
-        place: i8,
+        place: u8,
         marker: CountMarkers,
     ) -> Option<i8> {
 
+        if (place > 0) && (place <= V::RELIABLE_FLOATING_PLACES) {
+
+            let scaler: V = V::from_i64(10).power_with_int(place as u32);
+
+            let value: V = self.marker_value(marker).absolute();
+            let whole_part: V = value.truncate();
+            let fractional_part: V = value - whole_part;
+
+            let shifted: V = fractional_part * scaler;
+            let floored: V = shifted.truncate();
+            let remainder: V = shifted - floored;
+
+            // EPSILON must be scaled by the same factor the fractional part was shifted by,
+            // since a noise margin of EPSILON in the original value becomes a margin of
+            // EPSILON * scaler once shifted into digit-extraction space.
+            let epsilon_at_place: V = V::EPSILON * scaler;
+
+            let corrected: V = if remainder >= (V::from_i64(1) - epsilon_at_place) {
+                floored + V::from_i64(1)
+            } else {
+                floored
+            };
+
+            let digit: V = corrected % V::from_i64(10);
+            Some(digit.as_i8())
+        }
+        else {
+            None
+        }
     }
 
     /// Returns `to_marker`'s value minus `from_marker`'s value, preserving sign to indicate direction:
