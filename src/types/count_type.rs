@@ -57,8 +57,20 @@ Copy                    // CountValue types are safe to copy.
     /// Text
     fn power_with_int(self, value: u32) -> Self;
 
-    /// Text
+    /// FLOATS DON'T HAVE SAT FUNCTIONS, SO THEIR IMPL IS MANUALLY DONE THROUGH CLAMP
     fn sat_add(self, value: Self) -> Self;
+
+    /// FLOATS DON'T HAVE SAT FUNCTIONS, SO THEIR IMPL IS MANUALLY DONE THROUGH CLAMP
+    fn sat_subtract(self, value: Self) -> Self;
+
+    /// FLOATS DON'T HAVE SAT FUNCTIONS, SO THEIR IMPL IS MANUALLY DONE THROUGH CLAMP
+    fn sat_multiply(self, value: Self) -> Self;
+
+    /// FLOATS DON'T HAVE SAT FUNCTIONS, SO THEIR IMPL IS MANUALLY DONE THROUGH CLAMP
+    fn sat_divide(self, value: Self) -> Self;
+
+    /// FLOATS DON'T HAVE SAT FUNCTIONS, SO THEIR IMPL IS MANUALLY DONE THROUGH CLAMP
+    fn sat_power(self, value: Self) -> Self;
 
     /// Text
     fn truncate(self) -> Self;
@@ -78,7 +90,7 @@ Copy                    // CountValue types are safe to copy.
     /// Text
     fn as_f64(self) -> f64;
 
-    /// INT TO INT CASTING DOESN'T SATURATE, IT WRAPS.  MENTION THIS FOR UNSIGNED TYPES.
+    /// This always saturates to `i8::MIN` - `i8::MAX` rather than wrapping.
     fn as_i8(self) -> i8;
 
     /// Text
@@ -122,6 +134,18 @@ impl CountValue for u8 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value as u32) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -147,7 +171,7 @@ impl CountValue for u8 {
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as u8 }
+    { value as u8 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as u8 }
@@ -184,6 +208,18 @@ impl CountValue for u16 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value as u32) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -209,7 +245,7 @@ impl CountValue for u16 {
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as u16 }
+    { value as u16 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as u16 }
@@ -246,6 +282,18 @@ impl CountValue for u32 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -271,7 +319,7 @@ impl CountValue for u32 {
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as u32 }
+    { value as u32 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as u32 }
@@ -308,6 +356,18 @@ impl CountValue for i8 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value as u32) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -333,7 +393,7 @@ impl CountValue for i8 {
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value as i8 }
+    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as i8 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as i8 }
@@ -370,6 +430,18 @@ impl CountValue for i16 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value as u32) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -389,13 +461,13 @@ impl CountValue for i16 {
     { self as f64 }
 
     fn as_i8(self) -> i8
-    { self as i8 }
+    { self.clamp(i8::MIN as i16, i8::MAX as i16) as i8 }
 
     fn as_i64(self) -> i64
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value as i16 }
+    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as i16 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as i16 }
@@ -432,6 +504,18 @@ impl CountValue for i32 {
     fn sat_add(self, value: Self) -> Self
     { self.saturating_add(value) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { self.saturating_sub(value) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { self.saturating_mul(value) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { self.saturating_div(value) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.saturating_pow(value as u32) }
+
     fn truncate(self) -> Self
     { self }
 
@@ -451,13 +535,13 @@ impl CountValue for i32 {
     { self as f64 }
 
     fn as_i8(self) -> i8
-    { self as i8 }
+    { self.clamp(i8::MIN as i32, i8::MAX as i32) as i8 }
 
     fn as_i64(self) -> i64
     { self as i64 }
 
     fn from_f64(value: f64) -> Self
-    { value as i32 }
+    { value.clamp(<Self as CountValue>::MIN as f64, <Self as CountValue>::MAX as f64) as i32 }
 
     fn from_i64(value: i64) -> Self
     { value.clamp(<Self as CountValue>::MIN as i64, <Self as CountValue>::MAX as i64) as i32 }
@@ -493,6 +577,18 @@ impl CountValue for f16 {
 
     fn sat_add(self, value: Self) -> Self
     { (self + value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_subtract(self, value: Self) -> Self
+    { (self - value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { (self * value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { (self / value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_power(self, value: Self) -> Self
+    { f16::from_f32(self.to_f32().powf(value.to_f32())).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
 
     fn truncate(self) -> Self
     { f16::from_f32(self.to_f32().trunc()) }
@@ -556,6 +652,18 @@ impl CountValue for f32 {
     fn sat_add(self, value: Self) -> Self
     { (self + value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
 
+    fn sat_subtract(self, value: Self) -> Self
+    { (self - value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_multiply(self, value: Self) -> Self
+    { (self * value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_divide(self, value: Self) -> Self
+    { (self / value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
+    fn sat_power(self, value: Self) -> Self
+    { self.powf(value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
+
     fn truncate(self) -> Self
     { self.trunc() }
 
@@ -589,17 +697,19 @@ impl CountValue for f32 {
 
 
 
-// ##################################### CountMarkers ENUM ###################################### //
+// ###################################### CountMarker ENUM ###################################### //
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "count_serialize", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "count_reflect", derive(Reflect), reflect(Clone, PartialEq))]
-pub enum CountMarkers {
+pub enum CountMarker {
     Anchor,
     Value,
     LowerBound,
     UpperBound,
 }
+
+
 
 // ####################################### CountErrors ENUM ##################################### //
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -607,7 +717,7 @@ pub enum CountErrors<V: CountValue> { // Ignore error, it's only present because
     NanNotAllowed,
     ExceedsUpperBound,
 }
-impl<V: Display + CountValue> Display for CountErrors<V> {
+impl<V: CountValue> Display for CountErrors<V> {  // Maybe add "Display" trait to impl<V: CountValue>?
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
 
@@ -747,6 +857,8 @@ impl<V: CountValue> Count<V> {
         }
     }
 
+
+
     // ##################################### GETTERS ########################################## //
     ///
     #[inline]
@@ -794,11 +906,11 @@ impl<V: CountValue> Count<V> {
 
     // ##################################### SETTERS ########################################## //
     ///
-    pub fn set_anchor(&mut self, value: V) {
+    pub fn set_anchor(&mut self, value: V) -> Result<(), CountErrors<V>> {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
-        panic_if_is_nan("anchor", "setting or adding", value);
+        panic_if_is_nan("anchor", "setting", value);
 
         // Determine the active bounds.
         // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
@@ -810,11 +922,11 @@ impl<V: CountValue> Count<V> {
     }
 
     ///
-    pub fn set_value(&mut self, new_value: V) {
+    pub fn set_value(&mut self, new_value: V) -> Result<(), CountErrors<V>> {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
-        panic_if_is_nan("value", "setting or adding", new_value);
+        panic_if_is_nan("value", "setting", new_value);
 
         // Determine the active bounds.
         // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
@@ -825,12 +937,12 @@ impl<V: CountValue> Count<V> {
         self.value = new_value.count_clamp(active_lower_bound, active_upper_bound);
     }
 
-    ///
+    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
     pub fn set_lower_bound(&mut self, value: V) -> Result<(), CountErrors<V>> {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
-        panic_if_is_nan("lower_bound", "setting or adding", value);
+        panic_if_is_nan("lower_bound", "setting", value);
 
         // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
         // This really only impacts integer types since they support an asymmetric range.
@@ -839,7 +951,7 @@ impl<V: CountValue> Count<V> {
         // If the passed value is greater than the upper bound, return an error.
         // Otherwise, assign the lower bound to the passed value.
         if passed_value > self.upper_bound {
-            return Err(CountErrors::ExceedsUpperBound);
+            return Err(CountErrors::<V>::ExceedsUpperBound);
         }
         else {
             self.lower_bound = passed_value;
@@ -851,42 +963,12 @@ impl<V: CountValue> Count<V> {
         Ok(())
     }
 
-    ///
-    pub fn set_lower_bound_with_swap(&mut self, value: V) {
+    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
+    pub fn set_upper_bound(&mut self, value: V) -> Result<(), CountErrors<V>> {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
-        panic_if_is_nan("lower_bound", "setting or adding", value);
-
-        // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
-        // This really only impacts integer types since they support an asymmetric range.
-        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
-
-        // If the passed value is greater than the upper bound, than the lower bound
-        // gets reassigned to the upper bound value and the new upper bound value will become the
-        // passed value; flip-flopping bound values to ensure the word "lower" remains as it's defined.
-        //
-        // If the passed value is NOT greater than the upper bound, assign the lower
-        // bound value to the passed value.
-        if passed_value > self.upper_bound {
-            let new_lower_bound: V = self.upper_bound;
-            self.upper_bound = passed_value;
-            self.lower_bound = new_lower_bound;
-        }
-        else {
-            self.lower_bound = passed_value;
-        }
-
-        // Clamp the anchor and value to the new boundary range.
-        self.enforce_bounds();
-    }
-
-    ///
-    pub fn set_upper_bound(&mut self, value: V) {
-
-        // PANIC EVALUATION
-        // Passed value can not be NaN.
-        panic_if_is_nan("upper_bound", "setting or adding", value);
+        panic_if_is_nan("upper_bound", "setting", value);
 
         // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
         // This really only impacts integer types since they support an asymmetric range.
@@ -901,36 +983,6 @@ impl<V: CountValue> Count<V> {
                 2. You can use the set_upper_bound_with_swap method on a Count to handle any reordering of bound values if setting the upper bound value goes below the lower bound value.  For adding, you can use the add_with_swap to achieve the same functionality.",
                 "\x1b[31m", "\x1b[0m"
             );
-        }
-        else {
-            self.upper_bound = passed_value;
-        }
-
-        // Clamp the anchor and value to the new boundary range.
-        self.enforce_bounds();
-    }
-
-    ///
-    pub fn set_upper_bound_with_swap(&mut self, value: V) {
-
-        // PANIC EVALUATION
-        // Passed value can not be NaN.
-        panic_if_is_nan("upper_bound", "setting or adding", value);
-
-        // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
-        // This really only impacts integer types since they support an asymmetric range.
-        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
-
-        // If the passed value is less than the lower bound, than the upper bound
-        // gets reassigned to the lower bound value and the new lower bound value will become the
-        // passed value; flip-flopping bound values to ensure the word "upper" remains as it's defined.
-        //
-        // If the passed value is NOT less than the lower bound, assign the upper
-        // bound value to the passed value.
-        if passed_value < self.lower_bound {
-            let new_upper_bound: V = self.lower_bound;
-            self.lower_bound = passed_value;
-            self.upper_bound = new_upper_bound;
         }
         else {
             self.upper_bound = passed_value;
@@ -984,49 +1036,85 @@ impl<V: CountValue> Count<V> {
 
 
     // ################################### MARKER METHODS ##################################### //
+    /// WILL HAVE TO MENTION FOR EACH OPERATOR METHOD WHAT EACH MARKER ERROR MEANS AND HOW TO HANDLE THEM.
     ///
+    /// ADD A PANIC FOR NAN INPUT HERE
     pub fn add(
         &mut self,
         value: V,
-        marker: CountMarkers
-    ) {
+        marker: CountMarker
+    ) -> Result<(), CountErrors<V>> {
         match marker {
-            CountMarkers::Anchor        => { self.set_anchor(self.anchor.sat_add(value)); }
-            CountMarkers::Value         => { self.set_value(self.value.sat_add(value)); }
-            CountMarkers::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_add(value)); }
-            CountMarkers::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_add(value)); }
+            CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_add(value)) }
+            CountMarker::Value         => { self.set_value(self.value.sat_add(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_add(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_add(value)) }
         }
     }
 
-    ///
-    pub fn add_with_swap(
+    /// ADD A PANIC FOR NAN INPUT HERE
+    pub fn subtract(
         &mut self,
         value: V,
-        marker: CountMarkers
-    ) {
+        marker: CountMarker
+    ) -> Result<(), CountErrors<V>> {
         match marker {
-            CountMarkers::Anchor        => { self.set_anchor(self.anchor.sat_add(value)); }
-            CountMarkers::Value         => { self.set_value(self.value.sat_add(value)); }
-            CountMarkers::LowerBound    => { self.set_lower_bound_with_swap(self.lower_bound.sat_add(value)); }
-            CountMarkers::UpperBound    => { self.set_upper_bound_with_swap(self.upper_bound.sat_add(value)); }
+            CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_subtract(value)) }
+            CountMarker::Value         => { self.set_value(self.value.sat_subtract(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_subtract(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_subtract(value)) }
         }
     }
 
-    ///
-    #[inline]
-    pub fn are_markers_equal(
-        &self,
-        marker_1: CountMarkers,
-        marker_2: CountMarkers,
-    ) -> bool {
-        self.marker_value(marker_1) == self.marker_value(marker_2)
+    /// ADD A PANIC FOR NAN INPUT HERE
+    pub fn multiply(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) -> Result<(), CountErrors<V>> {
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_multiply(value)) }
+            CountMarker::Value         => { self.set_value(self.value.sat_multiply(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_multiply(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_multiply(value)) }
+        }
     }
 
+    /// ADD A PANIC_IF_ZERO FUNCTION AND USE IT HERE FOR VALUE
     ///
+    /// ADD A PANIC FOR NAN INPUT HERE
+    pub fn divide(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) -> Result<(), CountErrors<V>> {
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_divide(value)) }
+            CountMarker::Value         => { self.set_value(self.value.sat_divide(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_divide(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_divide(value)) }
+        }
+    }
+
+    /// ADD A PANIC FOR NAN INPUT HERE
+    pub fn power(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) -> Result<(), CountErrors<V>> {
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_power(value)) }
+            CountMarker::Value         => { self.set_value(self.value.sat_power(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_power(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_power(value)) }
+        }
+    }
+
+    /// ADD A PANIC FOR NAN INPUT HERE
     pub fn get_whole_digit(
         &self,
         place: u8,
-        marker: CountMarkers,
+        marker: CountMarker,
     ) -> Option<i8> {
 
         // If the wanted place exists within the given CountValue type, see if the digit exists and return it.
@@ -1062,7 +1150,7 @@ impl<V: CountValue> Count<V> {
     pub fn get_floating_digit_in_memory(
         &self,
         place: u8,
-        marker: CountMarkers,
+        marker: CountMarker,
     ) -> Option<i8> {
 
         if (place > 0) && (place <= V::MAX_FLOATING_PLACES) {
@@ -1096,7 +1184,7 @@ impl<V: CountValue> Count<V> {
     pub fn get_floating_digit_with_epsilon(
         &self,
         place: u8,
-        marker: CountMarkers,
+        marker: CountMarker,
     ) -> Option<i8> {
 
         if (place > 0) && (place <= V::RELIABLE_FLOATING_PLACES) {
@@ -1136,8 +1224,8 @@ impl<V: CountValue> Count<V> {
     /// - **Zero Result**: The two markers currently hold equal values.
     pub fn get_signed_difference(
         &self,
-        from_marker: CountMarkers,
-        to_marker: CountMarkers,
+        from_marker: CountMarker,
+        to_marker: CountMarker,
     ) -> V::Difference {
         let from_value: V = self.marker_value(from_marker);
         let to_value: V = self.marker_value(to_marker);
@@ -1147,8 +1235,8 @@ impl<V: CountValue> Count<V> {
     /// WILL ALWAYS RETURN A POSITIVE VALUE, THIS DOES INCLUDE THE POSSIBILITY OF 0.
     pub fn get_absolute_difference(
         &self,
-        marker_1: CountMarkers,
-        marker_2: CountMarkers,
+        marker_1: CountMarker,
+        marker_2: CountMarker,
     ) -> V::Difference {
         let value_1: V = self.marker_value(marker_1);
         let value_2: V = self.marker_value(marker_2);
@@ -1159,9 +1247,9 @@ impl<V: CountValue> Count<V> {
     /// MENTION THAT NONE WILL BE RETURNED IN THE CASE THAT START == END
     pub fn get_percentage(
         &self,
-        value_marker: CountMarkers,
-        starting_marker: CountMarkers,
-        ending_marker: CountMarkers,
+        value_marker: CountMarker,
+        starting_marker: CountMarker,
+        ending_marker: CountMarker,
     ) -> Option<f64> {
 
         // Obtaining the values of the markers as f64 floats to ensure the returned percentage holds
@@ -1186,13 +1274,13 @@ impl<V: CountValue> Count<V> {
     pub fn get_linear_interpolation(
         &self,
         percentage: f32,
-        starting_marker: CountMarkers,
-        ending_marker: CountMarkers,
+        starting_marker: CountMarker,
+        ending_marker: CountMarker,
     ) -> V {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
-        panic_if_is_nan("value from a percentage", "getting", percentage);
+        panic_if_is_nan("linear interpolation", "getting", percentage);
 
         // Using f64 for calculation to increase the precision of the result.  There will be a lossy
         // conversion for the return since the ending f64 value must be returned as V, but the lossy
@@ -1225,25 +1313,23 @@ impl<V: CountValue> Count<V> {
     #[inline]
     pub fn print_information(&self) {
         println!("ANCHOR : {}", self.anchor);
-        println!("CURRENT_VALUE : {}", self.value);
+        println!("VALUE : {}", self.value);
         println!("LOWER_BOUND : {}", self.lower_bound);
         println!("UPPER_BOUND : {}", self.upper_bound);
         println!("IS_LOWER_BOUND_ACTIVE : {}", self.is_lower_bound_active);
         println!("IS_UPPER_BOUND_ACTIVE : {}", self.is_upper_bound_active);
-        println!("V::MIN : {}", V::MIN);
-        println!("V::MAX : {}", V::MAX);
+        println!("MINIMUM POTENTIAL VALUE FOR MARKERS : {}", V::MIN);
+        println!("MAXIMUM POTENTIAL VALUE FOR MARKERS: {}", V::MAX);
     }
 
-    /// TECHNICALLY NOT NECESSARY FOR PUBLIC USAGE, BUT MAYBE IT COULD BE USED BY OTHERS?
-    /// THIS IS USED FOR DIFFERENCE AND PERCENTAGE METHODS SO THAT PARAMETERS ARE ENUM VALUES RATHER THAN STRINGS, BUT
-    /// IT MIGHT HAVE A USE BEYOND SUCH THINGS.  DEFINITELY SHOULDN'T BE USED OVER THE GETTERS, THAT WOULD BE SILLY.
+    ///
     #[inline]
-    pub fn marker_value(&self, marker: CountMarkers) -> V {
+    fn marker_value(&self, marker: CountMarker) -> V {
         match marker {
-            CountMarkers::Anchor        => { self.anchor }
-            CountMarkers::Value  => { self.value }
-            CountMarkers::LowerBound    => { self.lower_bound }
-            CountMarkers::UpperBound    => { self.upper_bound }
+            CountMarker::Anchor        => { self.anchor }
+            CountMarker::Value         => { self.value }
+            CountMarker::LowerBound    => { self.lower_bound }
+            CountMarker::UpperBound    => { self.upper_bound }
         }
     }
 
@@ -1281,29 +1367,22 @@ impl<V: CountValue> Count<V> {
 
 
 // ##################################### PANIC FUNCTIONS ######################################## //
-/// Checks if a value falls within the provided minimum and maximum range (inclusive), will `PANIC` if the value is outside the provided range.
-/// If a `PANIC` were to occur, a printed message will be displayed to explain the cause of the `PANIC`.
 ///
-/// #### Example
-/// ```ignore
-/// panic_if_value_is_out_of_range(5, 1, 10);    // Passes
-/// panic_if_value_is_out_of_range(15, 1, 10);   // Panics
-/// ```
 #[inline]
-fn panic_if_value_is_out_of_range<V: CountValue>(name_of_value: &str, value: V, minimum: V, maximum: V) {
+fn panic_if_value_is_out_of_range<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V, minimum: V, maximum: V) {
     assert!(
         value >= minimum && value <= maximum,
-        "{}[COUNT PANIC]{} You are constructing a Count's {name_of_value} with the value {value}.  {name_of_value} must be between {minimum} and {maximum} (inclusive).",
+        "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with the value {value}.  {name_of_value} must be between {minimum} and {maximum} (inclusive).",
         "\x1b[31m", "\x1b[0m",
     );
 }
 
 ///
 #[inline]
-fn panic_if_lower_bound_is_greater_than_upper_bound<V: CountValue>(lower_bound: V, upper_bound: V) {
+fn panic_if_lower_bound_is_greater_than_upper_bound<V: CountValue>(name_of_action: &str, lower_bound: V, upper_bound: V) {
     if lower_bound > upper_bound {
         panic!(
-            "{}[COUNT PANIC]{} You are constructing a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your lower_bound can not be greater than your upper_bound.",
+            "{}[COUNT PANIC]{} You are {name_of_action} a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your lower_bound can not be greater than your upper_bound.",
             "\x1b[31m", "\x1b[0m",
         );
     }
@@ -1311,10 +1390,10 @@ fn panic_if_lower_bound_is_greater_than_upper_bound<V: CountValue>(lower_bound: 
 
 ///
 #[inline]
-fn panic_if_upper_bound_is_less_than_lower_bound<V: CountValue>(lower_bound: V, upper_bound: V) {
+fn panic_if_upper_bound_is_less_than_lower_bound<V: CountValue>(name_of_action: &str, lower_bound: V, upper_bound: V) {
     if upper_bound < lower_bound {
         panic!(
-            "{}[COUNT PANIC]{} You are constructing a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your upper_bound can not be less than your lower_bound.",
+            "{}[COUNT PANIC]{} You are {name_of_action} a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your upper_bound can not be less than your lower_bound.",
             "\x1b[31m", "\x1b[0m",
         );
     }
@@ -1341,19 +1420,21 @@ fn panic_if_construction_is_invalid<V: CountValue>(
     is_lower_bound_active: bool,
     is_upper_bound_active: bool,
 ) {
-    // Panic if a passed value for anchor, value, lower_bound, or upper_bound is NaN.
+    // Panic if a passed value for markers are NaN.
     panic_if_is_nan("anchor", "constructing", anchor);
     panic_if_is_nan("value", "constructing", value);
     panic_if_is_nan("lower_bound", "constructing", lower_bound);
     panic_if_is_nan("upper_bound", "constructing", upper_bound);
 
     // Panic if either boundary is being constructed with literals that don't match their definition.
-    panic_if_lower_bound_is_greater_than_upper_bound(lower_bound, upper_bound);
-    panic_if_upper_bound_is_less_than_lower_bound(lower_bound, upper_bound);
+    panic_if_lower_bound_is_greater_than_upper_bound("constructing", lower_bound, upper_bound);
+    panic_if_upper_bound_is_less_than_lower_bound("constructing", lower_bound, upper_bound);
 
-    // Panic if value or anchor are being constructed with literals outside the active boundaries.
+    // Panic if markers are being constructed with literals outside their boundaries.
     let active_lower_bound = if is_lower_bound_active { lower_bound } else { V::MIN };
     let active_upper_bound = if is_upper_bound_active { upper_bound } else { V::MAX };
-    panic_if_value_is_out_of_range("value", value, active_lower_bound, active_upper_bound);
-    panic_if_value_is_out_of_range("anchor", anchor, active_lower_bound, active_upper_bound);
+    panic_if_value_is_out_of_range("value", "constructing", value, active_lower_bound, active_upper_bound);
+    panic_if_value_is_out_of_range("anchor", "constructing", anchor, active_lower_bound, active_upper_bound);
+    panic_if_value_is_out_of_range("lower_bound", "constructing", lower_bound, V::MIN, V::MAX);
+    panic_if_value_is_out_of_range("upper_bound", "constructing", upper_bound, V::MIN, V::MAX);
 }

@@ -11,7 +11,7 @@ pub fn tick_tickers<V: TickerValue, P: TickerPrecision>(
     time: Res<Time>,
     mut tickers: Query<&mut Ticker<V, P>>,
 ) {
-    // Read the high-precision f64 delta and convert it down to f32 or f16 if it's not f64.
+    // Read the high-precision f64 delta and convert it down to f32 or f16 if queried ticker doesn't have f64 precision.
     let delta_in_seconds = P::from_f64(time.delta_secs_f64());
     for mut ticker in tickers.iter_mut() {
         ticker.tick(delta_in_seconds);
