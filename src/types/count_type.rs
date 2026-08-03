@@ -713,28 +713,34 @@ pub enum CountMarker {
 
 // ####################################### CountErrors ENUM ##################################### //
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CountErrors<V: CountValue> { // Ignore error, it's only present because V is not being used at the moment.
-    NanNotAllowed,
-    ExceedsUpperBound,
+pub enum CountErrors<V: CountValue> {
+    NanNotAllowed{
+        name_of_value: &'static str,
+    },
+    ExceedsBoundary{
+        value: V,
+        name_of_value: &'static str,
+        name_of_boundary: &'static str,
+        action: &'static str,
+    }
 }
-impl<V: CountValue> Display for CountErrors<V> {  // Maybe add "Display" trait to impl<V: CountValue>?
+impl<V: CountValue> Display for CountErrors<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
 
-            CountErrors::NanNotAllowed => {
+            CountErrors::NanNotAllowed { name_of_value } => {
                 write!(f,
-                   "Cannot be NaN."
+                       "{}[COUNT ERROR]{} Count's {name_of_value} does not accept NaN for input.",
+                       "\x1b[31m", "\x1b[0m"
                 )
             },
 
-            CountErrors::ExceedsUpperBound => {
+            CountErrors::ExceedsBoundary { value, name_of_value, name_of_boundary, action } => {
                 write!(f,
-                    "{}[COUNT ERROR]{} Count's lower bound can not be set to a value past the upper bound.  You can avoid this error by doing any of the following:
-                    1. Make sure you're setting the lower bound of a Count to be below or equal to the upper bound, not above it.  Also, the add method uses setters, so make sure to check your usage of it as well.
-                    2. You can use the set_lower_bound_with_swap method on a Count to handle any reordering of bound values if setting the lower bound value exceeds the upper bound value.  For adding, you can use the add_with_swap to achieve the same functionality.",
-                    "\x1b[31m", "\x1b[0m"
+                       "{}[COUNT ERROR]{} Count's {name_of_value} can not be set to {value} as that is {action} the {name_of_boundary}.",
+                       "\x1b[31m", "\x1b[0m"
                 )
-            }
+            },
         }
     }
 }
@@ -896,12 +902,6 @@ impl<V: CountValue> Count<V> {
         self.is_upper_bound_active
     }
 
-    ///
-    #[inline]
-    pub fn is_double_bound(&self) -> bool {
-        self.is_lower_bound_active && self.is_upper_bound_active
-    }
-
 
 
     // ##################################### SETTERS ########################################## //
@@ -917,12 +917,37 @@ impl<V: CountValue> Count<V> {
         let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
         let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
 
+        if value < active_lower_bound {
+            return Err(CountErrors::<V>::ExceedsUpperBound);
+        }
+        else if value > active_upper_bound {
+            return Err(CountErrors::<V>::ExceedsLowerBound);
+        }
+        else {
+            self.anchor = value;
+        }
+
+        Ok(())
+    }
+
+    ///
+    pub fn set_anchor_with_clamp(&mut self, value: V) {
+
+        // PANIC EVALUATION
+        // Passed value can not be NaN.
+        panic_if_is_nan("anchor", "setting", value);
+
+        // Determine the active bounds.
+        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
+        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+
         // Reassign anchor to the clamped passed value that is following the active bounds.
         self.anchor = value.count_clamp(active_lower_bound, active_upper_bound);
     }
 
     ///
-    pub fn set_value(&mut self, new_value: V) -> Result<(), CountErrors<V>> {
+    pub fn set_value_with_clamp(&mut self, new_value: V) {
 
         // PANIC EVALUATION
         // Passed value can not be NaN.
