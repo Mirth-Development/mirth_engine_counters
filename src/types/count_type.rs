@@ -718,27 +718,29 @@ pub enum CountError<V: CountValue> {
         value: V,
         boundary: V,
         name_of_value: &'static str,
-        name_of_boundary: &'static str,
     },
     ExceedsUpperBound{
         value: V,
         boundary: V,
         name_of_value: &'static str,
-        name_of_boundary: &'static str,
     }
 }
 impl<V: CountValue> Display for CountError<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CountError::ExceedsLowerBound { value, boundary, name_of_value, name_of_boundary } => {
+            CountError::ExceedsLowerBound { value, boundary, name_of_value } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below the {name_of_boundary} of {boundary}.",
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below the lower_bound of {boundary}.  Here are some notes about this error:
+                       1. When changing the upper_bound of a Count, you can not go below the lower_bound even if the lower_bound is inactive.
+                       2. When changing the anchor or value of a Count, you can not go below the lower_bound when it's active.  But you are able to when it's inactive.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
-            CountError::ExceedsUpperBound { value, boundary, name_of_value, name_of_boundary } => {
+            CountError::ExceedsUpperBound { value, boundary, name_of_value } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above the {name_of_boundary} of {boundary}.",
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above the upper_bound of {boundary}.  Here are some notes about this error:
+                       1. When changing the lower_bound of a Count, you can not go above the upper_bound even if the upper_bound is inactive.
+                       2. When changing the anchor or value of a Count, you can not go above the upper_bound when it's active.  But you are able to when it's inactive.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
@@ -866,7 +868,7 @@ impl<V: CountValue> Count<V> {
 
 
 
-    // ##################################### GETTERS ########################################## //
+    // ###################################### GETTERS ########################################### //
     ///
     #[inline]
     pub fn anchor(&self) -> V {
@@ -905,40 +907,32 @@ impl<V: CountValue> Count<V> {
 
 
 
-    // ##################################### SETTERS ########################################## //
+    // ###################################### SETTERS ########################################### //
     ///
     pub fn set_anchor(&mut self, value: V) -> Result<(), CountError<V>> {
 
         // PANIC EVALUATION
         panic_if_is_nan("anchor", "setting", value);
 
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Determine if an error is to be thrown because the new value is out of the active bounds.
-        // If not, accept the new value.
-        if value < active_lower_bound {
+        // Throw an error if the passed value is below an activated lower_bound.
+        if (value < self.lower_bound) && self.is_lower_bound_active {
             return Err(CountError::<V>::ExceedsLowerBound{
                 value,
-                boundary: active_lower_bound,
+                boundary: self.lower_bound,
                 name_of_value: "anchor",
-                name_of_boundary: "active lower bound",
             });
-        }
-        else if value > active_upper_bound {
-            return Err(CountError::<V>::ExceedsUpperBound{
-                value,
-                boundary: active_upper_bound,
-                name_of_value: "anchor",
-                name_of_boundary: "active upper bound",
-            });
-        }
-        else {
-            self.anchor = value;
         }
 
+        // Throw an error if the passed value is above an activated upper_bound.
+        else if (value > self.upper_bound) && self.is_upper_bound_active {
+            return Err(CountError::<V>::ExceedsUpperBound{
+                value,
+                boundary: self.upper_bound,
+                name_of_value: "anchor",
+            });
+        }
+
+        self.anchor = value.count_clamp(V::MIN, V::MAX);
         Ok(())
     }
 
@@ -948,33 +942,25 @@ impl<V: CountValue> Count<V> {
         // PANIC EVALUATION
         panic_if_is_nan("value", "setting", new_value);
 
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Determine if an error is to be thrown because the new value is out of the active bounds.
-        // If not, accept the new value.
-        if new_value < active_lower_bound {
+        // Throw an error if the passed value is below an activated lower_bound.
+        if (new_value < self.lower_bound) && self.is_lower_bound_active {
             return Err(CountError::<V>::ExceedsLowerBound{
                 value: new_value,
-                boundary: active_lower_bound,
+                boundary: self.lower_bound,
                 name_of_value: "value",
-                name_of_boundary: "active lower bound",
             });
-        }
-        else if new_value > active_upper_bound {
-            return Err(CountError::<V>::ExceedsUpperBound{
-                value: new_value,
-                boundary: active_upper_bound,
-                name_of_value: "value",
-                name_of_boundary: "active upper bound",
-            });
-        }
-        else {
-            self.value = new_value;
         }
 
+        // Throw an error if the passed value is above an activated upper_bound.
+        else if (new_value > self.upper_bound) && self.is_upper_bound_active {
+            return Err(CountError::<V>::ExceedsUpperBound{
+                value: new_value,
+                boundary: self.upper_bound,
+                name_of_value: "value",
+            });
+        }
+
+        self.value = new_value.count_clamp(V::MIN, V::MAX);
         Ok(())
     }
 
@@ -984,29 +970,17 @@ impl<V: CountValue> Count<V> {
         // PANIC EVALUATION
         panic_if_is_nan("lower_bound", "setting", value);
 
-        if value < V::MIN {
-            return Err(CountError::<V>::ExceedsLowerBound {
-                value,
-                boundary: V::MIN,
-                name_of_value: "lower_bound",
-                name_of_boundary: "CountValue::MIN",
-            });
-        }
-        else if value > self.upper_bound {
+        // Throw an error if the passed value is above the upper_bound.
+        if value > self.upper_bound {
             return Err(CountError::<V>::ExceedsUpperBound {
                 value,
                 boundary: self.upper_bound,
                 name_of_value: "lower_bound",
-                name_of_boundary: "upper_bound",
             });
         }
-        else {
-            self.lower_bound = value;
-        }
 
-        // Clamp the anchor and value to the new boundary range.
+        self.lower_bound = value.count_clamp(V::MIN, V::MAX);
         self.enforce_bounds();
-
         Ok(())
     }
 
@@ -1016,29 +990,17 @@ impl<V: CountValue> Count<V> {
         // PANIC EVALUATION
         panic_if_is_nan("upper_bound", "setting", value);
 
+        // Throw an error if the passed value is below the lower_bound.
         if value < self.lower_bound {
             return Err(CountError::<V>::ExceedsLowerBound {
                 value,
                 boundary: self.lower_bound,
                 name_of_value: "upper_bound",
-                name_of_boundary: "lower_bound",
             });
-        }
-        else if value > V::MAX {
-            return Err(CountError::<V>::ExceedsUpperBound {
-                value,
-                boundary: V::MAX,
-                name_of_value: "upper_bound",
-                name_of_boundary: "CountValue::MAX",
-            });
-        }
-        else {
-            self.upper_bound = value;
         }
 
-        // Clamp the anchor and value to the new boundary range.
+        self.upper_bound = value.count_clamp(V::MIN, V::MAX);
         self.enforce_bounds();
-
         Ok(())
     }
 
@@ -1512,6 +1474,7 @@ impl<V: CountValue> Count<V> {
     }
 
 
+
     // #################################### HELPER METHODS ###################################### //
     ///
     #[inline]
@@ -1528,7 +1491,7 @@ impl<V: CountValue> Count<V> {
 
     ///
     #[inline]
-    fn marker_name(&self, marker: CountMarker) -> &str {
+    pub fn marker_name(&self, marker: CountMarker) -> &str {
         match marker {
             CountMarker::Anchor        => { "ANCHOR" }
             CountMarker::Value         => { "VALUE" }
@@ -1539,7 +1502,7 @@ impl<V: CountValue> Count<V> {
 
     ///
     #[inline]
-    fn marker_value(&self, marker: CountMarker) -> V {
+    pub fn marker_value(&self, marker: CountMarker) -> V {
         match marker {
             CountMarker::Anchor        => { self.anchor }
             CountMarker::Value         => { self.value }
