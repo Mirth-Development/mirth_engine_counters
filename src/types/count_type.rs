@@ -1094,7 +1094,6 @@ impl<V: CountValue> Count<V> {
         self.upper_bound = value.count_clamp(self.lower_bound, V::MAX);
     }
 
-
     ///
     #[inline]
     pub fn activate_lower_bound(&mut self) {
@@ -1504,6 +1503,13 @@ impl<V: CountValue> Count<V> {
         V::from_f64(((end - start) * modified_percentage) + start)
     }
 
+    pub fn are_markers_equal(
+        &self,
+        marker_1: CountMarker,
+        marker_2: CountMarker,
+    ) -> bool {
+        self.marker_value(marker_1) == self.marker_value(marker_2)
+    }
 
 
     // #################################### HELPER METHODS ###################################### //

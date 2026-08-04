@@ -5,6 +5,7 @@ use bevy_reflect::Reflect;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
+use crate::{Count, CountValue};
 
 /// Used for implementing the `V` generic to define integer primitives a Ticker can store for its `start_value`, `end_value`, and `current_value`.
 ///
@@ -38,7 +39,6 @@ Copy                    // TickerValue types are integers, which means they're s
     fn from_f64(value: f64)         -> Self;
     fn from_i32(val: i32)           -> Self;
 }
-
 impl TickerValue for i8 {
     const MIN: Self                 = i8::MIN + 1;
     const MAX: Self                 = i8::MAX;
@@ -51,7 +51,6 @@ impl TickerValue for i8 {
     fn from_f64(value: f64)         -> Self { value as i8 }
     fn from_i32(value: i32)         -> Self { value as i8 }
 }
-
 impl TickerValue for i16 {
     const MIN: Self                 = i16::MIN + 1;
     const MAX: Self                 = i16::MAX;
@@ -64,7 +63,6 @@ impl TickerValue for i16 {
     fn from_f64(value: f64)         -> Self { value as i16 }
     fn from_i32(value: i32)         -> Self { value as i16 }
 }
-
 impl TickerValue for i32 {
     const MIN: Self                 = i32::MIN + 1;
     const MAX: Self                 = i32::MAX;
@@ -79,7 +77,7 @@ impl TickerValue for i32 {
 }
 
 
-
+// ################################## TickerPrecision TRAIT ##################################### //
 /// Used for implementing the `P` generic to define float types a Ticker can use for its precision in tracking time, `P` impacts the `time_interval` and `stored_time` fields.
 ///
 /// Supports f16, f32, and f64 for `stored_time` and `time_interval` fields within Ticker.
@@ -117,7 +115,6 @@ Copy                    // TickerPrecision types are floats, which means they're
     fn as_f64(self)                         -> f64;
     fn from_f64(value: f64)                 -> Self;
 }
-
 impl TickerPrecision for f16 {
     const MIN_POSITIVE: Self                =   f16::MIN_POSITIVE;
     const MAX: Self                         =   f16::MAX;
@@ -125,7 +122,6 @@ impl TickerPrecision for f16 {
     fn as_f64(self)                         ->  f64  { self.to_f64() }
     fn from_f64(value: f64)                 ->  Self { f16::from_f64(value) }
 }
-
 impl TickerPrecision for f32 {
     const MIN_POSITIVE: Self                =   f32::MIN_POSITIVE;
     const MAX: Self                         =   f32::MAX;
@@ -133,7 +129,6 @@ impl TickerPrecision for f32 {
     fn as_f64(self)                         ->  f64  { self as f64 }
     fn from_f64(value: f64)                 ->  Self { value as f32 }
 }
-
 impl TickerPrecision for f64 {
     const MIN_POSITIVE: Self                =   f64::MIN_POSITIVE;
     const MAX: Self                         =   f64::MAX;
@@ -144,58 +139,7 @@ impl TickerPrecision for f64 {
 
 
 
-/// Used for implementing the `F` generic which grants the ability for f16, f32, and f64 to be passed in for the float fields of a Ticker constructor, no matter the precision a ticker is set to.
-///
-/// #### Why Is This Trait Necessary?
-/// Primarily purposed to ease Ticker construction by allowing any float literal to be used as input
-/// for time_interval.  The implementation for this trait, and its use inside constructor methods, is
-/// what will allow for any float literal to be used for time_interval input.
-///
-/// #### Doesn't Rust Handle These Conversions On Its Own?
-/// Hell no.  Everything is explicit in Rust.  If something is EVER implicit, it means somebody did the work for you.
-pub trait TickerFloatBridge<P> {
-    /// Converting float literal to the precision type that is being used during the construction of a Ticker.
-    fn to_precision(self) -> P;
-}
-impl TickerFloatBridge<f16> for f64 {
-    #[inline]
-    fn to_precision(self) -> f16 { f16::from_f64(self) }
-}
-impl TickerFloatBridge<f32> for f64 {
-    #[inline]
-    fn to_precision(self) -> f32 { self as f32 }
-}
-impl TickerFloatBridge<f64> for f64 {
-    #[inline]
-    fn to_precision(self) -> f64 { self }
-}
-impl TickerFloatBridge<f16> for f32 {
-    #[inline]
-    fn to_precision(self) -> f16 { f16::from_f32(self) }
-}
-impl TickerFloatBridge<f32> for f32 {
-    #[inline]
-    fn to_precision(self) -> f32 { self }
-}
-impl TickerFloatBridge<f64> for f32 {
-    #[inline]
-    fn to_precision(self) -> f64 { self as f64 }
-}
-impl TickerFloatBridge<f16> for f16 {
-    #[inline]
-    fn to_precision(self) -> f16 { self }
-}
-impl TickerFloatBridge<f32> for f16 {
-    #[inline]
-    fn to_precision(self) -> f32 { self.to_f32() }
-}
-impl TickerFloatBridge<f64> for f16 {
-    #[inline]
-    fn to_precision(self) -> f64 { self.to_f64() }
-}
-
-
-
+// ################################## TickerBehaviors ENUM ###################################### //
 /// Defines the set of possible behaviors a Ticker can be assigned, controlling both whether the
 /// ticker is mutable and what happens to current_value once it reaches a boundary.
 ///
@@ -232,6 +176,8 @@ pub enum TickerBehaviors {
 }
 
 
+
+// ###################################### Ticker STRUCT ######################################### //
 /// In short, a ticker is a struct used to track the time between events.
 ///
 /// #### What Is A Ticker?
@@ -378,10 +324,8 @@ pub enum TickerBehaviors {
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "ticker_serialize", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "ticker_reflect", derive(Reflect), reflect(Clone, PartialEq))]
-pub struct Ticker<V: TickerValue, P: TickerPrecision> {
-    start_value:                V,
-    current_value:              V,
-    end_value:                  V,
+pub struct Ticker<V: CountValue, P: TickerPrecision> {
+    count:                      Count<V>,
     time_interval:              P,
     stored_time:                P,
     is_paused:                  bool,
@@ -389,8 +333,7 @@ pub struct Ticker<V: TickerValue, P: TickerPrecision> {
     is_handling_time_spikes:    bool,
     behavior:                   TickerBehaviors,
 }
-
-impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
+impl<V: CountValue, P: TickerPrecision> Default for Ticker<V, P> {
 
     /// Creates a MutLooper ticker that has the following properties:
     /// - start_value is set to 0.
@@ -405,10 +348,9 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
     /// The ticker is **mutable** and will loop when `current_value` hits either `start_value` or `end_value`.
     /// When a loop triggers, `current_value` is reset back to `start_value`.
     fn default() -> Self {
+        let count: Count<V> = Count::default();
         Self {
-            start_value:                V::from_i32(0),
-            current_value:              V::from_i32(0),
-            end_value:                  V::MAX,
+            count,
             time_interval:              P::from_f64(1.0),
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
@@ -418,8 +360,7 @@ impl<V: TickerValue, P: TickerPrecision> Default for Ticker<V, P> {
         }
     }
 }
-
-impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
+impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
     // ##################################### CONSTRUCTORS ######################################## //
     /// Used for defining a custom ticker.
@@ -431,30 +372,17 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehaviors::MutLooper);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new<F>(
-        start_value:                V,
-        current_value:              V,
-        end_value:                  V,
-        time_interval:              F,
+    pub fn new(
+        count:                      Count<V>,
+        time_interval:              P,
         is_paused:                  bool,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
         behavior:                   TickerBehaviors,
-    ) -> Self where F: TickerFloatBridge<P> {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
-
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
+    ) -> Self {
         Self {
-            start_value,
-            current_value,
-            end_value,
-            time_interval: time_interval.to_precision(),
+            count,
+            time_interval,
             stored_time: P::from_f64(0.0),
             is_paused,
             is_ticking_up,
@@ -481,12 +409,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// assert!(ticker.is_ticking_up());
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
-    pub fn new_looper<F>(
+    pub fn new_looper(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -496,7 +424,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value:                starting_value,
             current_value:              starting_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
@@ -518,14 +446,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_looper_custom(0, 25, 100, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
-    pub fn new_looper_custom<F>(
+    pub fn new_looper_custom(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -539,7 +467,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value,
             current_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up,
@@ -566,12 +494,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// assert!(ticker.is_ticking_down());
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new_mut_looper<F>(
+    pub fn new_mut_looper(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -581,7 +509,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value:                starting_value,
             current_value:              starting_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
@@ -603,14 +531,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 50, 100, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
     /// ```
-    pub fn new_mut_looper_custom<F>(
+    pub fn new_mut_looper_custom(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -624,7 +552,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value,
             current_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up,
@@ -651,12 +579,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_oneshot(0, 10, 1.0, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
-    pub fn new_oneshot<F>(
+    pub fn new_oneshot(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -666,7 +594,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value:                starting_value,
             current_value:              starting_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
@@ -689,14 +617,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_oneshot_custom(0, 5, 10, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
-    pub fn new_oneshot_custom<F>(
+    pub fn new_oneshot_custom(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -710,7 +638,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value,
             current_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up,
@@ -737,12 +665,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot(0, 100, 2.0, false);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
-    pub fn new_mut_oneshot<F>(
+    pub fn new_mut_oneshot(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -752,7 +680,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value:                starting_value,
             current_value:              starting_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
@@ -775,14 +703,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_mut_oneshot_custom(10, 20, 30, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
     /// ```
-    pub fn new_mut_oneshot_custom<F>(
+    pub fn new_mut_oneshot_custom(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -796,7 +724,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value,
             current_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up,
@@ -823,12 +751,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_freezing(0, 100, 1.0, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
-    pub fn new_freezing<F>(
+    pub fn new_freezing(
         starting_value:             V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         // Panic Evaluators
         check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
@@ -838,7 +766,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value:                starting_value,
             current_value:              starting_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up:              starting_value <= end_value,
@@ -861,14 +789,14 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     /// let ticker = Ticker::<i32, f32>::new_freezing_custom(0, 0, 10, 1.0, true, true);
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
-    pub fn new_freezing_custom<F>(
+    pub fn new_freezing_custom(
         start_value:                V,
         current_value:              V,
         end_value:                  V,
-        time_interval:              F,
+        time_interval:              P,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-    ) -> Self where F: TickerFloatBridge<P> {
+    ) -> Self {
 
         let min = start_value.min(end_value);
         let max = start_value.max(end_value);
@@ -882,7 +810,7 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
             start_value,
             current_value,
             end_value,
-            time_interval:              time_interval.to_precision(),
+            time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
             is_ticking_up,
@@ -1120,117 +1048,6 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
     #[inline]
     pub fn behavior(&self) -> TickerBehaviors {
         self.behavior
-    }
-
-    /// Returns the digit at the given decimal place of `current_value`, where `place` is
-    /// 1-indexed from the right (ones place = 1, tens place = 2, hundreds place = 3, etc.),
-    /// up to `place = 10` (billions place).
-    ///
-    /// Will always return a positive value if the digit exists.
-    ///
-    /// - `place == 1` (ones place) always returns `Some`, since the ones-place always exists.
-    /// - `place` from 2 to 10 returns `None` if `current_value` doesn't support the place.
-    /// - `place` outside 1 to 10 (inclusive) returns `None`.
-    ///
-    /// #### Breakdown
-    /// - If `current_value` is `6`, `digit(2)` returns `None` — no tens-place exists.
-    /// - If `current_value` is `63`, `digit(2)` returns `Some(6)` — the tens-place exists and is `6`.
-    /// - If `current_value` is `103`, `digit(3)` returns `Some(1)` — the hundreds-place exists and is `1`.
-    /// - If `current_value` is `1003`, `digit(3)` returns `Some(0)` — the hundreds-place exists but happens to be `0`.
-    ///
-    /// The `None` sentinel allows you to differentiate between a digit that is absent and a digit that is simply `0`.
-    ///
-    /// #### What If I Want Something Instead of None?
-    /// Use `.unwrap_or(INSERT_WHATEVER_HERE)` after the call to replace `None` with a value you want.
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// // current_value is set to 6, so there is no 2nd digit in current_value
-    /// let ticker = Ticker::<i32, f32>::new(0, 6, 100, 1.0, false, true, true, TickerBehaviors::Looper);
-    /// assert_eq!(ticker.digit(2).unwrap_or(0), 0);
-    /// assert_eq!(ticker.digit(1).unwrap(), 6);
-    /// ```
-    ///
-    /// #### Examples
-    ///
-    /// Basic digit extraction across multiple places:
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 1234, 10000, 1.0, false, true, true, TickerBehaviors::Looper);
-    ///
-    /// assert_eq!(ticker.digit(1), Some(4)); // ones place
-    /// assert_eq!(ticker.digit(2), Some(3)); // tens place
-    /// assert_eq!(ticker.digit(3), Some(2)); // hundreds place
-    /// assert_eq!(ticker.digit(4), Some(1)); // thousands place
-    /// assert_eq!(ticker.digit(5), None);    // no ten-thousands place
-    /// ```
-    ///
-    /// The ones place always exists, even when `current_value` is `0`:
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 0, 100, 1.0, false, true, true, TickerBehaviors::Looper);
-    /// assert_eq!(ticker.digit(1), Some(0));
-    /// assert_eq!(ticker.digit(2), None);
-    /// ```
-    ///
-    /// Negative values are handled the same as positive ones, since `digit` operates on
-    /// the absolute value of `current_value`:
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_looper_custom(-100, -42, 0, 1.0, false, true);
-    /// assert_eq!(ticker.digit(1), Some(2));
-    /// assert_eq!(ticker.digit(2), Some(4));
-    /// assert_eq!(ticker.digit(3), None);
-    /// ```
-    ///
-    /// A digit that exists but happens to be `0` returns `Some(0)`, distinguishing it from
-    /// a digit that doesn't exist at all (`None`):
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 1003, 10000, 1.0, false, true, true, TickerBehaviors::Looper);
-    /// assert_eq!(ticker.digit(3), Some(0)); // hundreds place exists, and is 0
-    /// assert_eq!(ticker.digit(5), None);    // ten-thousands place doesn't exist
-    /// ```
-    ///
-    /// A `place` outside the supported `1..=10` range returns `None`:
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 42, 100, 1.0, false, true, true, TickerBehaviors::Looper);
-    /// assert_eq!(ticker.digit(0), None);
-    /// assert_eq!(ticker.digit(11), None);
-    /// ```
-    #[inline]
-    pub fn digit(&self, place: i32) -> Option<i8> {
-
-        // The divisor for place N is 10^(N-1).
-        let divisor = match place {
-            1  => V::from_i32(1),
-            2  => V::from_i32(10),
-            3  => V::from_i32(100),
-            4  => V::from_i32(1_000),
-            5  => V::from_i32(10_000),
-            6  => V::from_i32(100_000),
-            7  => V::from_i32(1_000_000),
-            8  => V::from_i32(10_000_000),
-            9  => V::from_i32(100_000_000),
-            10 => V::from_i32(1_000_000_000),
-            _  => return None, // out-of-range place
-        };
-
-        // Ticker supports negatives for current_value, must flip to positive for calculation.
-        let value = self.current_value.absolute();
-
-        // The ones place always exists; every other place requires current_value to reach it.
-        if (place == 1) || (value >= divisor) {
-            Some(((value / divisor) % V::from_i32(10)).as_i8())
-        } else {
-            None
-        }
     }
     // ######################################################################################## //
 
@@ -1501,124 +1318,6 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
 
 
 
-    // ################################### EQUALITY METHODS ##################################### //
-    /// Returns true if the `current_value` and the `start_value` are equal to one another, false otherwise.
-    ///
-    /// # When Should I Use This Method?
-    /// Use this method in oneshot tickers that count to `start_value` if you want to determine if the
-    /// oneshot is finished.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 10, 1.0, true, true);
-    /// assert!(ticker.is_current_at_start());
-    /// ```
-    #[inline]
-    pub fn is_current_at_start(&self) -> bool {
-        self.current_value == self.start_value
-    }
-
-    /// Returns true if the `current_value` and the `end_value` are equal to one another, false otherwise.
-    ///
-    /// # When Should I Use This Method?
-    /// Use this method in oneshot tickers that count to `end_value` if you want to determine if the
-    /// oneshot is finished.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 10, 10, 1.0, true, true);
-    /// assert!(ticker.is_current_at_end());
-    /// ```
-    #[inline]
-    pub fn is_current_at_end(&self) -> bool {
-        self.current_value == self.end_value
-    }
-
-    /// Returns true if the `start_value` and the `end_value` are equal to one another, false otherwise.
-    ///
-    /// # Why Does This Method Exist?
-    /// `start_value` and `end_value` can equal one another since their values can be changed or set to
-    /// the same value at the creation of a ticker instance.
-    ///
-    /// # When Should I Use This Method?
-    /// Only scenario I can think for using this would be when the bounds of a ticker are slowly tightening
-    /// and you need something to check when they have finally met one another.  It is possible to tighten
-    /// the bounds by constantly setting `start_value` and `end_value` to new numbers.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(10, 10, 10, 1.0, true, true);
-    /// assert!(ticker.is_start_at_end());
-    /// ```
-    #[inline]
-    pub fn is_start_at_end(&self) -> bool {
-        self.start_value == self.end_value
-    }
-    // ######################################################################################## //
-
-
-
-    // ################################# DIFFERENCE METHODS ################################### //
-    /// Returns the difference between `current_value` and `start_value`.
-    ///
-    /// Will only return positive numbers, including 0.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 35, 100, 1.0, true, true);
-    /// assert_eq!(ticker.difference_from_start(), 35);
-    /// ```
-    pub fn difference_from_start(&self) -> i64 {
-        let min: i64 = self.current_value.min(self.start_value).as_i64();
-        let max: i64 = self.current_value.max(self.start_value).as_i64();
-        max - min
-    }
-
-    /// Returns the difference between `current_value` and `end_value`.
-    ///
-    /// Will only return positive numbers, including 0.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 35, 100, 1.0, true, true);
-    /// assert_eq!(ticker.difference_from_end(), 65);
-    /// ```
-    pub fn difference_from_end(&self) -> i64 {
-        let min: i64 = self.current_value.min(self.end_value).as_i64();
-        let max: i64 = self.current_value.max(self.end_value).as_i64();
-        max - min
-    }
-
-    /// Returns the difference between `start_value` and `end_value`.
-    ///
-    /// Will only return positive numbers, including 0.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(10, 35, 100, 1.0, true, true);
-    /// assert_eq!(ticker.difference_between_boundaries(), 90);
-    /// ```
-    pub fn difference_between_boundaries(&self) -> i64 {
-        let min: i64 = self.start_value.min(self.end_value).as_i64();
-        let max: i64 = self.start_value.max(self.end_value).as_i64();
-        max - min
-    }
-    // ######################################################################################## //
-
-
-
     // ################################### SUM METHODS ######################################## //
     /// Adds to the `start_value` of the ticker by the passed value.  Can take in negatives for subtraction.
     /// Will not let the result of summing cause overflow or wrapping; results will always be within
@@ -1729,6 +1428,12 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
+    // THIS WILL NEED TO BREAK UP INTO SEVERAL METHODS.  THEIR PURPOSES ARE AS FOLLOWS:
+    // ADDING
+    // SUBTRACTING
+    // MULTIPLYING
+    // DIVIDING
+    // POWERING
     /// Adds to the `time_interval` of the ticker by the passed value.  Can take in negatives for subtraction.
     ///
     /// #### What Values Can time_interval Be Set To?
@@ -1762,70 +1467,6 @@ impl<V: TickerValue, P: TickerPrecision> Ticker<V, P> {
         else {
             panic_and_print_mutability_message();
         }
-    }
-    // ########################################################################################## //
-
-
-
-    // ################################### PERCENTAGE METHODS ################################### //
-    /// Returns the exact percentage of completion from `start_value` to `end_value` as a floating point.
-    /// - A return value of `0.0` means `current_value` is at `start_value`,
-    /// - A return value of `1.0` means `current_value` is at `end_value`.
-    /// - A return value of `None` means `start_value` and `end_value` are equal.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 40, 100, 1.0, true, true);
-    ///
-    /// // Since it deals with floats, tolerate tiny inaccuracies
-    /// let percentage = ticker.percentage_completed().unwrap();
-    /// assert!((percentage - 0.4).abs() < f64::EPSILON);
-    /// ```
-    pub fn percentage_completed(&self) -> Option<f64> {
-
-        if self.start_value == self.end_value {
-            return None;
-        }
-
-        let start: f64 = self.start_value.as_f64();
-        let current: f64 = self.current_value.as_f64();
-        let end: f64 = self.end_value.as_f64();
-
-        let range_reciprocal: f64 = 1.0 / (end - start);
-
-        Some((current - start) * range_reciprocal)
-    }
-
-    /// Returns the remaining percentage needed to reach `end_value` as a floating point.
-    /// - A return value of `0.0` means `current_value` is at `end_value`,
-    /// - A return value of `1.0` means `current_value` is at `start_value`.
-    /// - A return value of `None` means `start_value` and `end_value` are equal.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 25, 100, 1.0, true, true);
-    ///
-    /// // Since it deals with floats, tolerate tiny inaccuracies
-    /// let remaining = ticker.percentage_remaining().unwrap();
-    /// assert!((remaining - 0.75).abs() < f64::EPSILON);
-    /// ```
-    pub fn percentage_remaining(&self) -> Option<f64> {
-
-        if self.start_value == self.end_value {
-            return None;
-        }
-
-        let start: f64 = self.start_value.as_f64();
-        let current: f64 = self.current_value.as_f64();
-        let end: f64 = self.end_value.as_f64();
-
-        let range_reciprocal: f64 = 1.0 / (end - start);
-
-        Some((end - current) * range_reciprocal)
     }
     // ########################################################################################## //
 
@@ -2147,4 +1788,3 @@ fn check_if_value_is_within_range<T: PartialOrd + Display>(value: T, minimum: T,
         "\x1b[31m", "\x1b[0m", minimum, maximum, value
     );
 }
-// ############################################################################################## //

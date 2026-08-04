@@ -36,7 +36,7 @@ fn spawn_custom_ticker(mut commands: Commands) {
         0,
         5,
         100,
-        1.0,
+        f16::from_f32(1.0),
         false,
         true,
         true,
