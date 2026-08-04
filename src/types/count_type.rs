@@ -711,33 +711,34 @@ pub enum CountMarker {
 
 
 
-// ####################################### CountErrors ENUM ##################################### //
+// ######################################## CountError ENUM ##################################### //
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CountErrors<V: CountValue> {
-    NanNotAllowed{
-        name_of_value: &'static str,
-    },
-    ExceedsBoundary{
+pub enum CountError<V: CountValue> {
+    ExceedsLowerBound{
         value: V,
+        boundary: V,
         name_of_value: &'static str,
         name_of_boundary: &'static str,
-        action: &'static str,
+    },
+    ExceedsUpperBound{
+        value: V,
+        boundary: V,
+        name_of_value: &'static str,
+        name_of_boundary: &'static str,
     }
 }
-impl<V: CountValue> Display for CountErrors<V> {
+impl<V: CountValue> Display for CountError<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-
-            CountErrors::NanNotAllowed { name_of_value } => {
+            CountError::ExceedsLowerBound { value, boundary, name_of_value, name_of_boundary } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} Count's {name_of_value} does not accept NaN for input.",
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below the {name_of_boundary} of {boundary}.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
-
-            CountErrors::ExceedsBoundary { value, name_of_value, name_of_boundary, action } => {
+            CountError::ExceedsUpperBound { value, boundary, name_of_value, name_of_boundary } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} Count's {name_of_value} can not be set to {value} as that is {action} the {name_of_boundary}.",
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above the {name_of_boundary} of {boundary}.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
@@ -906,10 +907,9 @@ impl<V: CountValue> Count<V> {
 
     // ##################################### SETTERS ########################################## //
     ///
-    pub fn set_anchor(&mut self, value: V) -> Result<(), CountErrors<V>> {
+    pub fn set_anchor(&mut self, value: V) -> Result<(), CountError<V>> {
 
         // PANIC EVALUATION
-        // Passed value can not be NaN.
         panic_if_is_nan("anchor", "setting", value);
 
         // Determine the active bounds.
@@ -917,11 +917,23 @@ impl<V: CountValue> Count<V> {
         let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
         let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
 
+        // Determine if an error is to be thrown because the new value is out of the active bounds.
+        // If not, accept the new value.
         if value < active_lower_bound {
-            return Err(CountErrors::<V>::ExceedsUpperBound);
+            return Err(CountError::<V>::ExceedsLowerBound{
+                value,
+                boundary: active_lower_bound,
+                name_of_value: "anchor",
+                name_of_boundary: "active lower bound",
+            });
         }
         else if value > active_upper_bound {
-            return Err(CountErrors::<V>::ExceedsLowerBound);
+            return Err(CountError::<V>::ExceedsUpperBound{
+                value,
+                boundary: active_upper_bound,
+                name_of_value: "anchor",
+                name_of_boundary: "active upper bound",
+            });
         }
         else {
             self.anchor = value;
@@ -931,10 +943,124 @@ impl<V: CountValue> Count<V> {
     }
 
     ///
+    pub fn set_value(&mut self, new_value: V) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("value", "setting", new_value);
+
+        // Determine the active bounds.
+        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
+        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+
+        // Determine if an error is to be thrown because the new value is out of the active bounds.
+        // If not, accept the new value.
+        if new_value < active_lower_bound {
+            return Err(CountError::<V>::ExceedsLowerBound{
+                value: new_value,
+                boundary: active_lower_bound,
+                name_of_value: "value",
+                name_of_boundary: "active lower bound",
+            });
+        }
+        else if new_value > active_upper_bound {
+            return Err(CountError::<V>::ExceedsUpperBound{
+                value: new_value,
+                boundary: active_upper_bound,
+                name_of_value: "value",
+                name_of_boundary: "active upper bound",
+            });
+        }
+        else {
+            self.value = new_value;
+        }
+
+        Ok(())
+    }
+
+    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
+    pub fn set_lower_bound(&mut self, value: V) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("lower_bound", "setting", value);
+
+        if value < V::MIN {
+            return Err(CountError::<V>::ExceedsLowerBound {
+                value,
+                boundary: V::MIN,
+                name_of_value: "lower_bound",
+                name_of_boundary: "CountValue::MIN",
+            });
+        }
+        else if value > self.upper_bound {
+            return Err(CountError::<V>::ExceedsUpperBound {
+                value,
+                boundary: self.upper_bound,
+                name_of_value: "lower_bound",
+                name_of_boundary: "upper_bound",
+            });
+        }
+        else {
+            self.lower_bound = value;
+        }
+
+        // Clamp the anchor and value to the new boundary range.
+        self.enforce_bounds();
+
+        Ok(())
+    }
+
+    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
+    pub fn set_upper_bound(&mut self, value: V) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("upper_bound", "setting", value);
+
+        if value < self.lower_bound {
+            return Err(CountError::<V>::ExceedsLowerBound {
+                value,
+                boundary: self.lower_bound,
+                name_of_value: "upper_bound",
+                name_of_boundary: "lower_bound",
+            });
+        }
+        else if value > V::MAX {
+            return Err(CountError::<V>::ExceedsUpperBound {
+                value,
+                boundary: V::MAX,
+                name_of_value: "upper_bound",
+                name_of_boundary: "CountValue::MAX",
+            });
+        }
+        else {
+            self.upper_bound = value;
+        }
+
+        // Clamp the anchor and value to the new boundary range.
+        self.enforce_bounds();
+
+        Ok(())
+    }
+
+    ///
+    pub fn set_value_with_clamp(&mut self, new_value: V) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("value", "setting", new_value);
+
+        // Determine the active bounds.
+        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
+        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+
+        // Reassign value to the clamped passed value that is following the active bounds.
+        self.value = new_value.count_clamp(active_lower_bound, active_upper_bound);
+    }
+
+    ///
     pub fn set_anchor_with_clamp(&mut self, value: V) {
 
         // PANIC EVALUATION
-        // Passed value can not be NaN.
         panic_if_is_nan("anchor", "setting", value);
 
         // Determine the active bounds.
@@ -947,75 +1073,27 @@ impl<V: CountValue> Count<V> {
     }
 
     ///
-    pub fn set_value_with_clamp(&mut self, new_value: V) {
+    pub fn set_lower_bound_with_clamp(&mut self, value: V) {
 
         // PANIC EVALUATION
-        // Passed value can not be NaN.
-        panic_if_is_nan("value", "setting", new_value);
-
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Reassign value to the clamped passed value that is following the active bounds.
-        self.value = new_value.count_clamp(active_lower_bound, active_upper_bound);
-    }
-
-    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
-    pub fn set_lower_bound(&mut self, value: V) -> Result<(), CountErrors<V>> {
-
-        // PANIC EVALUATION
-        // Passed value can not be NaN.
         panic_if_is_nan("lower_bound", "setting", value);
 
-        // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
-        // This really only impacts integer types since they support an asymmetric range.
-        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
-
-        // If the passed value is greater than the upper bound, return an error.
-        // Otherwise, assign the lower bound to the passed value.
-        if passed_value > self.upper_bound {
-            return Err(CountErrors::<V>::ExceedsUpperBound);
-        }
-        else {
-            self.lower_bound = passed_value;
-        }
-
-        // Clamp the anchor and value to the new boundary range.
-        self.enforce_bounds();
-
-        Ok(())
+        // Reassign lower_bound to the clamped range of V::MIN to upper_bound.
+        // Doing this to ensure that lower_bound always stays within its allowable range.
+        self.lower_bound = value.count_clamp(V::MIN, self.upper_bound);
     }
 
-    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
-    pub fn set_upper_bound(&mut self, value: V) -> Result<(), CountErrors<V>> {
+    ///
+    pub fn set_upper_bound_with_clamp(&mut self, value: V) {
 
         // PANIC EVALUATION
-        // Passed value can not be NaN.
         panic_if_is_nan("upper_bound", "setting", value);
 
-        // Pushing up/down the passed value to be within the acceptable range for the type of CountValue.
-        // This really only impacts integer types since they support an asymmetric range.
-        let passed_value: V = value.count_clamp(V::MIN, V::MAX);
-
-        // If the passed value is greater than the lower bound, set the upper bound to the lower bound value.
-        // Otherwise, assign the upper bound to the passed value.
-        if passed_value < self.lower_bound {
-            panic!(
-                "{}[COUNT PANIC]{} Count's upper bound can not be set to a value below the lower bound.  You can avoid this panic by doing any of the following:
-                1. Make sure you're setting the upper bound of a Count to be greater or equal to the lower bound, not below it.  Also, the add method uses setters, so make sure to check your usage of it as well.
-                2. You can use the set_upper_bound_with_swap method on a Count to handle any reordering of bound values if setting the upper bound value goes below the lower bound value.  For adding, you can use the add_with_swap to achieve the same functionality.",
-                "\x1b[31m", "\x1b[0m"
-            );
-        }
-        else {
-            self.upper_bound = passed_value;
-        }
-
-        // Clamp the anchor and value to the new boundary range.
-        self.enforce_bounds();
+        // Reassign upper_bound to the clamped range of lower_bound to V::MAX.
+        // Doing this to ensure that upper_bound always stays within its allowable range.
+        self.upper_bound = value.count_clamp(self.lower_bound, V::MAX);
     }
+
 
     ///
     #[inline]
@@ -1062,13 +1140,15 @@ impl<V: CountValue> Count<V> {
 
     // ################################### MARKER METHODS ##################################### //
     /// WILL HAVE TO MENTION FOR EACH OPERATOR METHOD WHAT EACH MARKER ERROR MEANS AND HOW TO HANDLE THEM.
-    ///
-    /// ADD A PANIC FOR NAN INPUT HERE
     pub fn add(
         &mut self,
         value: V,
         marker: CountMarker
-    ) -> Result<(), CountErrors<V>> {
+    ) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "adding", value);
+
         match marker {
             CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_add(value)) }
             CountMarker::Value         => { self.set_value(self.value.sat_add(value)) }
@@ -1077,12 +1157,16 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// ADD A PANIC FOR NAN INPUT HERE
+    ///
     pub fn subtract(
         &mut self,
         value: V,
         marker: CountMarker
-    ) -> Result<(), CountErrors<V>> {
+    ) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "subtracting", value);
+
         match marker {
             CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_subtract(value)) }
             CountMarker::Value         => { self.set_value(self.value.sat_subtract(value)) }
@@ -1091,12 +1175,16 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// ADD A PANIC FOR NAN INPUT HERE
+    ///
     pub fn multiply(
         &mut self,
         value: V,
         marker: CountMarker
-    ) -> Result<(), CountErrors<V>> {
+    ) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "multiplying", value);
+
         match marker {
             CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_multiply(value)) }
             CountMarker::Value         => { self.set_value(self.value.sat_multiply(value)) }
@@ -1105,14 +1193,18 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// ADD A PANIC_IF_ZERO FUNCTION AND USE IT HERE FOR VALUE
     ///
-    /// ADD A PANIC FOR NAN INPUT HERE
     pub fn divide(
         &mut self,
         value: V,
         marker: CountMarker
-    ) -> Result<(), CountErrors<V>> {
+    ) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        let marker_name: &str = self.marker_name(marker);
+        panic_if_is_nan(marker_name, "dividing", value);
+        panic_if_zero(marker_name, "dividing", value);
+
         match marker {
             CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_divide(value)) }
             CountMarker::Value         => { self.set_value(self.value.sat_divide(value)) }
@@ -1121,12 +1213,16 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// ADD A PANIC FOR NAN INPUT HERE
+    ///
     pub fn power(
         &mut self,
         value: V,
         marker: CountMarker
-    ) -> Result<(), CountErrors<V>> {
+    ) -> Result<(), CountError<V>> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "exponentiating", value);
+
         match marker {
             CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_power(value)) }
             CountMarker::Value         => { self.set_value(self.value.sat_power(value)) }
@@ -1135,7 +1231,99 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// ADD A PANIC FOR NAN INPUT HERE
+    ///
+    pub fn add_with_clamp(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "adding", value);
+
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_add(value)) }
+            CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_add(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_add(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_add(value)) }
+        }
+    }
+
+    ///
+    pub fn subtract_with_clamp(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "subtracting", value);
+
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_subtract(value)) }
+            CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_subtract(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_subtract(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_subtract(value)) }
+        }
+    }
+
+    ///
+    pub fn multiply_with_clamp(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "multiplying", value);
+
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_multiply(value)) }
+            CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_multiply(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_multiply(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_multiply(value)) }
+        }
+    }
+
+    ///
+    pub fn divide_with_clamp(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) {
+
+        // PANIC EVALUATION
+        let marker_name: &str = self.marker_name(marker);
+        panic_if_is_nan(marker_name, "dividing", value);
+        panic_if_zero(marker_name, "dividing", value);
+
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_divide(value)) }
+            CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_divide(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_divide(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_divide(value)) }
+        }
+    }
+
+    ///
+    pub fn power_with_clamp(
+        &mut self,
+        value: V,
+        marker: CountMarker
+    ) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan(self.marker_name(marker), "exponentiating", value);
+
+        match marker {
+            CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_power(value)) }
+            CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_power(value)) }
+            CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_power(value)) }
+            CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_power(value)) }
+        }
+    }
+
+    ///
     pub fn get_whole_digit(
         &self,
         place: u8,
@@ -1304,7 +1492,6 @@ impl<V: CountValue> Count<V> {
     ) -> V {
 
         // PANIC EVALUATION
-        // Passed value can not be NaN.
         panic_if_is_nan("linear interpolation", "getting", percentage);
 
         // Using f64 for calculation to increase the precision of the result.  There will be a lossy
@@ -1315,20 +1502,6 @@ impl<V: CountValue> Count<V> {
         let start: f64 = self.marker_value(starting_marker).as_f64();
         let end: f64 = self.marker_value(ending_marker).as_f64();
         V::from_f64(((end - start) * modified_percentage) + start)
-    }
-
-
-
-    // ################################# MISCELLANEOUS METHODS ################################## //
-    ///
-    #[inline]
-    pub fn value_to_anchor(&mut self) {
-        self.value = self.anchor;
-    }
-
-    #[inline]
-    pub fn anchor_to_value(&mut self) {
-        self.anchor = self.value;
     }
 
 
@@ -1345,6 +1518,17 @@ impl<V: CountValue> Count<V> {
         println!("IS_UPPER_BOUND_ACTIVE : {}", self.is_upper_bound_active);
         println!("MINIMUM POTENTIAL VALUE FOR MARKERS : {}", V::MIN);
         println!("MAXIMUM POTENTIAL VALUE FOR MARKERS: {}", V::MAX);
+    }
+
+    ///
+    #[inline]
+    fn marker_name(&self, marker: CountMarker) -> &str {
+        match marker {
+            CountMarker::Anchor        => { "ANCHOR" }
+            CountMarker::Value         => { "VALUE" }
+            CountMarker::LowerBound    => { "LOWER_BOUND" }
+            CountMarker::UpperBound    => { "UPPER_BOUND" }
+        }
     }
 
     ///
@@ -1430,6 +1614,18 @@ fn panic_if_is_nan<V: CountValue>(name_of_value: &str, name_of_action: &str, val
     if value.is_nan() {
         panic!(
             "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with NaN.
+            NaN is not a valid CountValue for any comparison, bound, or arithmetic operation.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
+///
+#[inline]
+fn panic_if_zero<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V) {
+    if value == V::from_i64(0) {
+        panic!(
+            "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with 0.  This will produce NaN.
             NaN is not a valid CountValue for any comparison, bound, or arithmetic operation.",
             "\x1b[31m", "\x1b[0m",
         );
