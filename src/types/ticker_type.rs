@@ -875,36 +875,8 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.start_value(), 5);
     /// ```
     #[inline]
-    pub fn start_value(&self) -> V {
-        self.start_value
-    }
-
-    /// Returns the current_value of a Ticker.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 7, 10, 1.0, true, true);
-    /// assert_eq!(ticker.current_value(), 7);
-    /// ```
-    #[inline]
-    pub fn current_value(&self) -> V {
-        self.current_value
-    }
-
-    /// Returns the end_value of a Ticker.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 20, 1.0, true, true);
-    /// assert_eq!(ticker.end_value(), 20);
-    /// ```
-    #[inline]
-    pub fn end_value(&self) -> V {
-        self.end_value
+    pub fn count(&self) -> &Count<V> {
+        &self.count
     }
 
     /// Returns the time_interval of a Ticker.
@@ -972,22 +944,6 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         self.is_paused
     }
 
-    /// Returns true if the ticker is unpaused, false otherwise.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 10, 1.0, true, true);
-    /// assert!(ticker.is_unpaused());
-    /// ticker.pause();
-    /// assert!(!ticker.is_unpaused());
-    /// ```
-    #[inline]
-    pub fn is_unpaused(&self) -> bool {
-        !self.is_paused
-    }
-
     /// Returns true if a ticker is set to tick its `current_value` up, false otherwise.
     ///
     /// #### Example
@@ -1000,20 +956,6 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     #[inline]
     pub fn is_ticking_up(&self) -> bool {
         self.is_ticking_up
-    }
-
-    /// Returns true if a ticker is set to tick its `current_value` down, false otherwise.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(10, 10, 0, 1.0, false, true);
-    /// assert!(ticker.is_ticking_down());
-    /// ```
-    #[inline]
-    pub fn is_ticking_down(&self) -> bool {
-        !self.is_ticking_up
     }
 
     /// Returns true if the ticker can fire more than once in a single .tick() call, false otherwise.
@@ -1076,80 +1018,32 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.start_value(), 40);
     /// assert_eq!(ticker.current_value(), 40); // Clamped from 20 up to the new start_value 40
     /// ```
-    pub fn set_start_value(&mut self, value: V) {
-        if self.is_mutable() {
-            // 1. Set and clamp the new start value.
-            self.start_value = value.clamp(V::MIN, V::MAX);
-
-            // 2. Identify the minimum and maximum boundaries between start and end.
-            let min_boundary = self.start_value.min(self.end_value);
-            let max_boundary = self.start_value.max(self.end_value);
-
-            // 3. Clamp current_value to stay within the updated boundaries.
-            self.current_value = self.current_value.clamp(min_boundary, max_boundary);
-        }
-        else {
-            panic_and_print_mutability_message();
-        }
-    }
-
-    /// Changes `current_value` to the passed value.
-    ///
-    /// #### Important
-    /// `current_value` can NOT go out of the range that `start_value` and `end_value` create.
-    /// Attempting to set `current_value` outside the range will cause it to be clamped down.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 10, 1.0, true, true);
-    /// ticker.set_current_value(5);
-    /// assert_eq!(ticker.current_value(), 5);
-    /// ```
     #[inline]
-    pub fn set_current_value(&mut self, value: V) {
+    pub fn set_count(&mut self) -> Option<&mut Count<V>>{
         if self.is_mutable() {
-            let min = self.start_value.min(self.end_value);
-            let max = self.start_value.max(self.end_value);
-            self.current_value = value.clamp(min, max);
+            Some(&mut self.count)
         }
         else {
             panic_and_print_mutability_message();
         }
     }
 
-    /// Changes `end_value` to the passed value.
-    ///
-    /// #### What Happens If Setting end_value Pushes current_value Out of Bounds?
-    /// If the new `end_value` shifts the valid range such that `current_value` is left outside
-    /// the boundaries, `current_value` is automatically clamped to the nearest valid edge.
-    ///
-    /// #### Important
-    /// `end_value` can NOT go out of the range of `V::MIN` to `V::MAX`.
-    /// Attempting to set `end_value` outside the range will cause it to be clamped down.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 80, 100, 1.0, true, true);
-    /// ticker.set_end_value(50);
-    ///
-    /// assert_eq!(ticker.end_value(), 50);
-    /// assert_eq!(ticker.current_value(), 50); // Clamped from 80 down to the new end_value 50
-    /// ```
-    pub fn set_end_value(&mut self, value: V) {
+    /// Time interval can not be negative--would mess up tick calculation.
+    #[inline]
+    pub fn set_time_interval(&mut self, value: P) {
         if self.is_mutable() {
-            // 1. Set and clamp the new end value.
-            self.end_value = value.clamp(V::MIN, V::MAX);
+            self.time_interval = value.clamp(P::MIN_POSITIVE, P::MAX);;
+        }
+        else {
+            panic_and_print_mutability_message();
+        }
+    }
 
-            // 2. Identify the minimum and maximum boundaries between start and end.
-            let min_boundary = self.start_value.min(self.end_value);
-            let max_boundary = self.start_value.max(self.end_value);
-
-            // 3. Clamp current_value to stay within the updated boundaries.
-            self.current_value = self.current_value.clamp(min_boundary, max_boundary);
+    /// Use when you need to wipe the timing state.
+    #[inline]
+    pub fn clear_stored_time(&mut self) {
+        if self.is_mutable() {
+            self.stored_time = P::from_f64(0.0);
         }
         else {
             panic_and_print_mutability_message();
@@ -1319,115 +1213,6 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
 
     // ################################### SUM METHODS ######################################## //
-    /// Adds to the `start_value` of the ticker by the passed value.  Can take in negatives for subtraction.
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within
-    /// `V::MIN` to `V::MAX` (inclusive).
-    ///
-    /// #### What Happens If Adding To start_value Pushes current_value Out of Bounds?
-    /// If the new `start_value` shifts the valid range such that `current_value` is left outside
-    /// the boundaries, `current_value` is automatically clamped to the nearest valid edge.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// // Case 1: Increasing start_value shifts the lower bound up, clamping current_value
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 20, 100, 1.0, true, true);
-    /// ticker.sum_to_start_value(40); // New start_value becomes 40
-    ///
-    /// assert_eq!(ticker.start_value(), 40);
-    /// assert_eq!(ticker.current_value(), 40); // Clamped from 20 up to 40
-    ///
-    /// // Case 2: Swapping directions where start > end
-    /// let mut ticker_down = Ticker::<i32, f32>::new_mut_looper_custom(100, 90, 50, 1.0, false, true);
-    /// ticker_down.sum_to_start_value(-20); // New start_value becomes 80 (Range is now 80 down to 50)
-    ///
-    /// assert_eq!(ticker_down.start_value(), 80);
-    /// assert_eq!(ticker_down.current_value(), 80); // Clamped from 90 down to 80
-    /// ```
-    pub fn sum_to_start_value(&mut self, value: V) {
-        if self.is_mutable() {
-            // 1. Calculate the new start value safely.
-            self.start_value = self.start_value.sat_add(value).clamp(V::MIN, V::MAX);
-
-            // 2. Identify the minimum and maximum boundaries between start and end.
-            let min_boundary = self.start_value.min(self.end_value);
-            let max_boundary = self.start_value.max(self.end_value);
-
-            // 3. Clamp current_value to stay within the updated boundaries.
-            self.current_value = self.current_value.clamp(min_boundary, max_boundary);
-        }
-        else {
-            panic_and_print_mutability_message();
-        }
-    }
-
-    /// Adds to the `current_value` of the ticker by the passed value.  Can take in negatives for subtraction.
-    ///
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within `start_value` to `end_value` (inclusive).
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 40, 100, 1.0, true, true);
-    /// ticker.sum_to_current_value(15);
-    /// assert_eq!(ticker.current_value(), 55);
-    /// ```
-    #[inline]
-    pub fn sum_to_current_value(&mut self, value: V) {
-        if self.is_mutable() {
-            let min = self.start_value.min(self.end_value);
-            let max = self.start_value.max(self.end_value);
-            self.current_value = self.current_value.sat_add(value).clamp(min, max);
-        }
-        else {
-            panic_and_print_mutability_message();
-        }
-    }
-
-    /// Adds to the `end_value` of the ticker by the passed value.  Can take in negatives for subtraction.
-    /// Will not let the result of summing cause overflow or wrapping; results will always be within
-    /// `V::MIN` to `V::MAX` (inclusive).
-    ///
-    /// #### What Happens If Adding To end_value Pushes current_value Out of Bounds?
-    /// If the new `end_value` shifts the valid range such that `current_value` is left outside
-    /// the boundaries, `current_value` is automatically clamped to the nearest valid edge.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// // Case 1: Shrinking the range pushes current_value out
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 80, 100, 1.0, true, true);
-    /// ticker.sum_to_end_value(-50); // New end_value becomes 50
-    ///
-    /// assert_eq!(ticker.end_value(), 50);
-    /// assert_eq!(ticker.current_value(), 50); // Clamped from 80 down to 50
-    ///
-    /// // Case 2: Swapping directions where start > end
-    /// let mut ticker_down = Ticker::<i32, f32>::new_mut_looper_custom(100, 55, 50, 1.0, false, true);
-    /// ticker_down.sum_to_end_value(10); // New end_value becomes 60 (Range is now 100 down to 60)
-    /// assert_eq!(ticker_down.end_value(), 60);
-    /// assert_eq!(ticker_down.current_value(), 60); // Clamped from 55 up to 60
-    /// ```
-    pub fn sum_to_end_value(&mut self, value: V) {
-        if self.is_mutable() {
-            // 1. Calculate the new end value safely.
-            self.end_value = self.end_value.sat_add(value).clamp(V::MIN, V::MAX);
-
-            // 2. Identify the minimum and maximum boundaries between start and end.
-            let min_boundary = self.start_value.min(self.end_value);
-            let max_boundary = self.start_value.max(self.end_value);
-
-            // 3. Clamp current_value to stay within the updated boundaries.
-            self.current_value = self.current_value.clamp(min_boundary, max_boundary);
-        }
-        else {
-            panic_and_print_mutability_message();
-        }
-    }
-
     // THIS WILL NEED TO BREAK UP INTO SEVERAL METHODS.  THEIR PURPOSES ARE AS FOLLOWS:
     // ADDING
     // SUBTRACTING
@@ -1493,40 +1278,11 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             panic_and_print_mutability_message();
         }
     }
-
-    /// Resets `current_value` back to `start_value`, and zeroes out `stored_time`.
-    ///
-    /// #### When To Use This Over Reset?
-    /// Best to use when you want to completely wipe whatever has been accumulated, including the
-    /// timing state.  If you need to carry over the timing state (the remainder in the last .tick()
-    /// calculation) then do NOT use this.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 40, 100, 1.0, true, true);
-    /// ticker.tick(1.3);
-    /// ticker.hard_reset();
-    ///
-    /// assert_eq!(ticker.current_value(), 0);
-    /// assert_eq!(ticker.stored_time(), 0.0);
-    /// ```
-    #[inline]
-    pub fn hard_reset(&mut self) {
-        if self.is_mutable() {
-            self.current_value = self.start_value;
-            self.stored_time = P::from_f64(0.0);
-        }
-        else {
-            panic_and_print_mutability_message();
-        }
-    }
     // ########################################################################################## //
 
 
 
-    // ########################### THE TICK (THE MOST IMPORTANT METHOD) ######################### //
+    // ############################### THE TICK (MOST IMPORTANT METHOD) ######################### //
     /// #### Description of .tick()
     /// Used to advance a ticker by taking in a passing of time between 2 events, *usually* for events
     /// that happen both consistently and constantly (such as when frames render); it does have the
