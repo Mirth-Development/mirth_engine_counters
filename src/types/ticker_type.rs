@@ -391,12 +391,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
-    /// Creates an unpaused Looper that ticks `current_value` from the supplied `starting_value` to the
-    /// passed `end_value`.
-    ///
-    /// #### What is the Behavior of a Looper Ticker?
-    /// The ticker is **immutable** and will loop when `current_value` hits either `start_value` or `end_value`.
-    /// When a loop triggers, `current_value` is reset back to `start_value`.
+    /// Creates an unpaused Looper that ticks a `Count` from the supplied `start_value` to the passed `end_value`.
     ///
     /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
     /// Up.
@@ -410,164 +405,49 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
     pub fn new_looper(
-        starting_value:             V,
-        end_value:                  V,
-        time_interval:              P,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        // Panic Evaluators
-        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up:              starting_value <= end_value,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Looper,
-        }
-    }
-
-    /// Creates an unpaused Looper.
-    ///
-    /// #### What is the Behavior of a Looper Ticker?
-    /// The ticker is **immutable** and will loop when `current_value` hits either `start_value` or `end_value`.
-    /// When a loop triggers, `current_value` is reset back to `start_value`.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_looper_custom(0, 25, 100, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
-    /// ```
-    pub fn new_looper_custom(
         start_value:                V,
-        current_value:              V,
         end_value:                  V,
         time_interval:              P,
-        is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
+        is_mutable:                 bool,
     ) -> Self {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
 
         // Panic Evaluators
         check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
         check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
+        // Determining bound locations since the end_value could be below or above start_value.
+        // Lower bound must always be the lesser number, upper bound must always be the greater number.
+        let lower_bound_value: V;
+        let upper_bound_value: V;
+        if start_value <= end_value {
+            lower_bound_value = start_value;
+            upper_bound_value = end_value;
+        }
+        else {
+            lower_bound_value = end_value;
+            upper_bound_value = start_value;
+        }
+
         Self {
-            start_value,
-            current_value,
-            end_value,
+            count: Count::new(
+                start_value,
+                start_value,
+                lower_bound_value,
+                upper_bound_value,
+                true,
+                true,
+            ),
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up,
+            is_ticking_up:              start_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Looper,
+            behavior:                   if is_mutable { TickerBehaviors::MutLooper } else { TickerBehaviors::Looper },
         }
     }
 
-    /// Creates an unpaused MutLooper that ticks `current_value` from the supplied `starting_value` to the
-    /// passed `end_value`.
-    ///
-    /// #### What is the Behavior of a MutLooper Ticker?
-    /// The ticker is **mutable** and will loop when `current_value` hits either `start_value` or `end_value`.
-    /// When a loop triggers, `current_value` is reset back to `start_value`.
-    ///
-    /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
-    /// Up.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper(10, 0, 1.0, true);
-    /// assert!(ticker.is_ticking_down());
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
-    /// ```
-    pub fn new_mut_looper(
-        starting_value:             V,
-        end_value:                  V,
-        time_interval:              P,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        // Panic Evaluators
-        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up:              starting_value <= end_value,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::MutLooper,
-        }
-    }
-
-    /// Creates an unpaused MutLooper.
-    ///
-    /// #### What is the Behavior of a MutLooper Ticker?
-    /// The ticker is **mutable** and will loop when `current_value` hits either `start_value` or `end_value`.
-    /// When a loop triggers, `current_value` is reset back to `start_value`.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 50, 100, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
-    /// ```
-    pub fn new_mut_looper_custom(
-        start_value:                V,
-        current_value:              V,
-        end_value:                  V,
-        time_interval:              P,
-        is_ticking_up:              bool,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
-
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value,
-            current_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::MutLooper,
-        }
-    }
-
-    /// Creates an unpaused Oneshot that ticks `current_value` from the supplied `starting_value` to the
-    /// passed `end_value`.
-    ///
-    /// #### What is the Behavior of a Oneshot Ticker?
-    /// The ticker is **immutable** and will assign `current_value` to a boundary's value if `current_value` were to hit `start_value` or `end_value`; start and end values are the boundaries.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
+    /// Creates an unpaused Oneshot that ticks a `Count` from the supplied `start_value` to the passed `end_value`.
     ///
     /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
     /// Up.
@@ -580,156 +460,45 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
     pub fn new_oneshot(
-        starting_value:             V,
-        end_value:                  V,
-        time_interval:              P,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        // Panic Evaluators
-        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up:              starting_value <= end_value,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Oneshot,
-        }
-    }
-
-    /// Creates an unpaused Oneshot.
-    ///
-    /// #### What is the Behavior of a Oneshot Ticker?
-    /// The ticker is **immutable** and will assign `current_value` to a boundary's value if `current_value` were to hit `start_value` or `end_value`; start and end values are the boundaries.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_oneshot_custom(0, 5, 10, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
-    /// ```
-    pub fn new_oneshot_custom(
         start_value:                V,
-        current_value:              V,
         end_value:                  V,
         time_interval:              P,
-        is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
+        is_mutable:                 bool,
     ) -> Self {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
 
         // Panic Evaluators
         check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
         check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
-        Self {
-            start_value,
-            current_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Oneshot,
+        // Determining bound locations since the end_value could be below or above start_value.
+        // Lower bound must always be the lesser number, upper bound must always be the greater number.
+        let lower_bound_value: V;
+        let upper_bound_value: V;
+        if start_value <= end_value {
+            lower_bound_value = start_value;
+            upper_bound_value = end_value;
         }
-    }
-
-    /// Creates an unpaused MutOneshot that ticks `current_value` from the supplied `starting_value` to the
-    /// passed `end_value`.
-    ///
-    /// #### What is the Behavior of a MutOneshot Ticker?
-    /// The ticker is **mutable** and will assign `current_value` to a boundary's value if `current_value` were to hit `start_value` or `end_value`; start and end values are the boundaries.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
-    ///
-    /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
-    /// Up.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_oneshot(0, 100, 2.0, false);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
-    /// ```
-    pub fn new_mut_oneshot(
-        starting_value:             V,
-        end_value:                  V,
-        time_interval:              P,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        // Panic Evaluators
-        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up:              starting_value <= end_value,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::MutOneshot,
+        else {
+            lower_bound_value = end_value;
+            upper_bound_value = start_value;
         }
-    }
-
-    /// Creates an unpaused MutOneshot.
-    ///
-    /// #### What is the Behavior of a MutOneshot Ticker?
-    /// The ticker is **mutable** and will assign `current_value` to a boundary's value if `current_value` were to hit `start_value` or `end_value`; start and end values are the boundaries.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_mut_oneshot_custom(10, 20, 30, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutOneshot);
-    /// ```
-    pub fn new_mut_oneshot_custom(
-        start_value:                V,
-        current_value:              V,
-        end_value:                  V,
-        time_interval:              P,
-        is_ticking_up:              bool,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
-
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
         Self {
-            start_value,
-            current_value,
-            end_value,
+            count: Count::new(
+                start_value,
+                start_value,
+                lower_bound_value,
+                upper_bound_value,
+                true,
+                true,
+            ),
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up,
+            is_ticking_up:              start_value <= end_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehaviors::MutOneshot,
+            behavior:                   if is_mutable { TickerBehaviors::MutOneshot } else { TickerBehaviors::Oneshot },
         }
     }
 
@@ -752,68 +521,42 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
     pub fn new_freezing(
-        starting_value:             V,
-        end_value:                  V,
-        time_interval:              P,
-        is_handling_time_spikes:    bool,
-    ) -> Self {
-
-        // Panic Evaluators
-        check_if_value_is_within_range(starting_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        Self {
-            start_value:                starting_value,
-            current_value:              starting_value,
-            end_value,
-            time_interval,
-            stored_time:                P::from_f64(0.0),
-            is_paused:                  false,
-            is_ticking_up:              starting_value <= end_value,
-            is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Freezing,
-        }
-    }
-
-    /// Creates an unpaused Freezing.
-    ///
-    /// #### What is the Behavior of a Freezing Ticker?
-    /// The ticker begins **mutable**, but it will become **immutable** once `current_value` hits `end_value`.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
-    ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
-    ///
-    /// let ticker = Ticker::<i32, f32>::new_freezing_custom(0, 0, 10, 1.0, true, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
-    /// ```
-    pub fn new_freezing_custom(
         start_value:                V,
-        current_value:              V,
         end_value:                  V,
         time_interval:              P,
-        is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
     ) -> Self {
-
-        let min = start_value.min(end_value);
-        let max = start_value.max(end_value);
 
         // Panic Evaluators
         check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(current_value, min, max);
         check_if_value_is_within_range(end_value, V::MIN, V::MAX);
 
+        // Determining bound locations since the end_value could be below or above start_value.
+        // Lower bound must always be the lesser number, upper bound must always be the greater number.
+        let lower_bound_value: V;
+        let upper_bound_value: V;
+        if start_value <= end_value {
+            lower_bound_value = start_value;
+            upper_bound_value = end_value;
+        }
+        else {
+            lower_bound_value = end_value;
+            upper_bound_value = start_value;
+        }
+
         Self {
-            start_value,
-            current_value,
-            end_value,
+            count: Count::new(
+                start_value,
+                start_value,
+                lower_bound_value,
+                upper_bound_value,
+                true,
+                true,
+            ),
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up,
+            is_ticking_up:              start_value <= end_value,
             is_handling_time_spikes,
             behavior:                   TickerBehaviors::Freezing,
         }
@@ -824,9 +567,14 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         ticker: Ticker<V, P>,
     ) -> Self {
         Self {
-            start_value:                ticker.start_value(),
-            current_value:              ticker.current_value(),
-            end_value:                  ticker.end_value(),
+            count: Count::new(
+                ticker.count.anchor(),
+                ticker.count.value(),
+                ticker.count.lower_bound(),
+                ticker.count.upper_bound(),
+                ticker.count.is_lower_bound_active(),
+                ticker.count.is_upper_bound_active(),
+            ),
             time_interval:              ticker.time_interval(),
             stored_time:                ticker.stored_time(),
             is_paused:                  ticker.is_paused(),
@@ -1470,7 +1218,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
 
     // ###################################### HELPER METHODS ######################################## //
-    /// Returns true if the current behavior of the ticker is mutable, otherwise false.
+    /// Returns true if the current behavior of the ticker is mutable, otherwise false.  Best used
+    /// when mass querying tickers that could be either mutable or immutable.  Can be used to avoid
+    /// panics that would occur when attempting to mutate an immutable behavior.
     ///
     /// #### Example
     /// ```
@@ -1539,8 +1289,8 @@ fn check_if_value_is_within_range<T: PartialOrd + Display>(value: T, minimum: T,
         value >= minimum && value <= maximum,
         "{}[TICKER PANIC]{} Ticker value must be between {} and {} (inclusive). Got {}.  You can avoid this panic by doing the following:
         1. Make sure your Ticker constructor has the current_value set to a number that is between start_value and end_value (inclusive).
-        2. Make sure your Ticker constructor has the start_value set to a number that is between TickerValue::MIN and TickerValue::MAX (inclusive).
-        3. Make sure your Ticker constructor has the end_value set to a number that is between TickerValue::MIN and TickerValue::MAX (inclusive).",
+        2. Make sure your Ticker constructor has the start_value set to a number that is between CountValue::MIN and CountValue::MAX (inclusive).
+        3. Make sure your Ticker constructor has the end_value set to a number that is between CountValue::MIN and CountValue::MAX (inclusive).",
         "\x1b[31m", "\x1b[0m", minimum, maximum, value
     );
 }
