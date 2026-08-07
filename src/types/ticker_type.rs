@@ -5,7 +5,7 @@ use bevy_reflect::Reflect;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
-use crate::{Count, CountValue};
+use crate::{Count, CountMarker, CountValue};
 
 /// Used for implementing the `V` generic to define integer primitives a Ticker can store for its `start_value`, `end_value`, and `current_value`.
 ///
@@ -391,9 +391,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
-    /// Creates an unpaused Looper that ticks a `Count` from the supplied `start_value` to the passed `end_value`.
+    /// Creates an unpaused Looper that ticks a `Count` from the supplied `starting_value` to the passed `ending_value`.
     ///
-    /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
+    /// #### What Is the Tick Direction If My Initial starting_value and ending_value Are Equal?
     /// Up.
     ///
     /// #### Example
@@ -405,34 +405,30 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
     /// ```
     pub fn new_looper(
-        start_value:                V,
-        end_value:                  V,
+        starting_value:             V,
+        ending_value:               V,
         time_interval:              P,
         is_handling_time_spikes:    bool,
         is_mutable:                 bool,
     ) -> Self {
 
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        // Determining bound locations since the end_value could be below or above start_value.
+        // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
         let lower_bound_value: V;
         let upper_bound_value: V;
-        if start_value <= end_value {
-            lower_bound_value = start_value;
-            upper_bound_value = end_value;
+        if starting_value <= ending_value {
+            lower_bound_value = starting_value;
+            upper_bound_value = ending_value;
         }
         else {
-            lower_bound_value = end_value;
-            upper_bound_value = start_value;
+            lower_bound_value = ending_value;
+            upper_bound_value = starting_value;
         }
 
         Self {
             count: Count::new(
-                start_value,
-                start_value,
+                starting_value,
+                starting_value,
                 lower_bound_value,
                 upper_bound_value,
                 true,
@@ -441,15 +437,15 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up:              start_value <= end_value,
+            is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
             behavior:                   if is_mutable { TickerBehaviors::MutLooper } else { TickerBehaviors::Looper },
         }
     }
 
-    /// Creates an unpaused Oneshot that ticks a `Count` from the supplied `start_value` to the passed `end_value`.
+    /// Creates an unpaused Oneshot that ticks a `Count` from the supplied `starting_value` to the passed `ending_value`.
     ///
-    /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
+    /// #### What Is the Tick Direction If My Initial starting_value and ending_value Are Equal?
     /// Up.
     ///
     /// #### Example
@@ -460,34 +456,30 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
     /// ```
     pub fn new_oneshot(
-        start_value:                V,
-        end_value:                  V,
+        starting_value:             V,
+        ending_value:               V,
         time_interval:              P,
         is_handling_time_spikes:    bool,
         is_mutable:                 bool,
     ) -> Self {
 
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        // Determining bound locations since the end_value could be below or above start_value.
+        // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
         let lower_bound_value: V;
         let upper_bound_value: V;
-        if start_value <= end_value {
-            lower_bound_value = start_value;
-            upper_bound_value = end_value;
+        if starting_value <= ending_value {
+            lower_bound_value = starting_value;
+            upper_bound_value = ending_value;
         }
         else {
-            lower_bound_value = end_value;
-            upper_bound_value = start_value;
+            lower_bound_value = ending_value;
+            upper_bound_value = starting_value;
         }
 
         Self {
             count: Count::new(
-                start_value,
-                start_value,
+                starting_value,
+                starting_value,
                 lower_bound_value,
                 upper_bound_value,
                 true,
@@ -496,19 +488,13 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up:              start_value <= end_value,
+            is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
             behavior:                   if is_mutable { TickerBehaviors::MutOneshot } else { TickerBehaviors::Oneshot },
         }
     }
 
-    /// Creates an unpaused Freezing that ticks `current_value` from the supplied `starting_value` to the
-    /// passed `end_value`.
-    ///
-    /// #### What is the Behavior of a Freezing Ticker?
-    /// The ticker begins **mutable**, but it will become **immutable** once `current_value` hits `end_value`.
-    ///
-    /// Additionally, the ticker's `stored_time` is set to 0.0 when `current_value` hits `end_value`.  This ensures the time state is completely reset once it reaches the end.
+    /// Creates an unpaused Freezing that ticks a `Count` from the supplied `start_value` to the `end_value`.
     ///
     /// #### What Is the Tick Direction If My Initial start_value and end_value Are Equal?
     /// Up.
@@ -521,33 +507,30 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
     /// ```
     pub fn new_freezing(
-        start_value:                V,
-        end_value:                  V,
+        starting_value:             V,
+        ending_value:               V,
         time_interval:              P,
         is_handling_time_spikes:    bool,
+        is_mutable:                 bool,
     ) -> Self {
 
-        // Panic Evaluators
-        check_if_value_is_within_range(start_value, V::MIN, V::MAX);
-        check_if_value_is_within_range(end_value, V::MIN, V::MAX);
-
-        // Determining bound locations since the end_value could be below or above start_value.
+        // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
         let lower_bound_value: V;
         let upper_bound_value: V;
-        if start_value <= end_value {
-            lower_bound_value = start_value;
-            upper_bound_value = end_value;
+        if starting_value <= ending_value {
+            lower_bound_value = starting_value;
+            upper_bound_value = ending_value;
         }
         else {
-            lower_bound_value = end_value;
-            upper_bound_value = start_value;
+            lower_bound_value = ending_value;
+            upper_bound_value = starting_value;
         }
 
         Self {
             count: Count::new(
-                start_value,
-                start_value,
+                starting_value,
+                starting_value,
                 lower_bound_value,
                 upper_bound_value,
                 true,
@@ -556,7 +539,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             time_interval,
             stored_time:                P::from_f64(0.0),
             is_paused:                  false,
-            is_ticking_up:              start_value <= end_value,
+            is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
             behavior:                   TickerBehaviors::Freezing,
         }
@@ -597,9 +580,14 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         ticker_behavior: TickerBehaviors,
     ) -> Self {
         Self {
-            start_value:                ticker.start_value(),
-            current_value:              ticker.current_value(),
-            end_value:                  ticker.end_value(),
+            count: Count::new(
+                ticker.count.anchor(),
+                ticker.count.value(),
+                ticker.count.lower_bound(),
+                ticker.count.upper_bound(),
+                ticker.count.is_lower_bound_active(),
+                ticker.count.is_upper_bound_active(),
+            ),
             time_interval:              ticker.time_interval(),
             stored_time:                ticker.stored_time(),
             is_paused:                  ticker.is_paused(),
@@ -767,9 +755,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// assert_eq!(ticker.current_value(), 40); // Clamped from 20 up to the new start_value 40
     /// ```
     #[inline]
-    pub fn set_count(&mut self) -> Option<&mut Count<V>>{
+    pub fn set_count(&mut self) -> &mut Count<V>{
         if self.is_mutable() {
-            Some(&mut self.count)
+            &mut self.count
         }
         else {
             panic_and_print_mutability_message();
@@ -777,10 +765,12 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     }
 
     /// Time interval can not be negative--would mess up tick calculation.
+    ///
+    /// CREATE ERROR FOR SUCH A THING!  CLAMP IS BAD?
     #[inline]
     pub fn set_time_interval(&mut self, value: P) {
         if self.is_mutable() {
-            self.time_interval = value.clamp(P::MIN_POSITIVE, P::MAX);;
+            self.time_interval = value.clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
             panic_and_print_mutability_message();
@@ -902,7 +892,6 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         else {
             panic_and_print_mutability_message();
         }
-
     }
 
     /// Will make it so that .tick() calls on a ticker are to add or subtract 1 to `current_value`;
@@ -1006,21 +995,25 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
 
     // ##################################### RESET METHODS ###################################### //
-    /// Resets `current_value` back to `start_value`.
     ///
-    /// #### Example
-    /// ```
-    /// use mirth_engine_counters::Ticker;
-    ///
-    /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 40, 100, 1.0, true, true);
-    /// assert_eq!(ticker.current_value(), 40);
-    ///
-    /// ticker.soft_reset();
-    /// assert_eq!(ticker.current_value(), 0);
     #[inline]
     pub fn soft_reset(&mut self) {
         if self.is_mutable() {
-            self.current_value = self.start_value;
+            let anchor_value: V = self.count().anchor();
+            self.set_count().set_value_with_clamp(anchor_value);
+        }
+        else {
+            panic_and_print_mutability_message();
+        }
+    }
+
+    ///
+    #[inline]
+    pub fn hard_reset(&mut self) {
+        if self.is_mutable() {
+            let anchor_value: V = self.count().anchor();
+            self.set_count().set_value_with_clamp(anchor_value);
+            self.stored_time = P::from_f64(0.0);
         }
         else {
             panic_and_print_mutability_message();
@@ -1152,9 +1145,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             false => match self.stored_time >= self.time_interval {
                 true => {
                     self.stored_time -= self.time_interval;
-                    V::from_i32(1)
+                    V::from_i64(1)
                 },
-                false => V::from_i32(0),
+                false => V::from_i64(0),
             },
         };
 
@@ -1166,47 +1159,37 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         // To be perfectly clear, magnitude_of_time_that_passed can only be greater than 0 if the stored_time went past the
         // time_interval value.  Greater than 0 means 1 or higher in this case, decimals in between 0 and 1
         // don't count.
-        if magnitude_of_time_that_passed > V::from_i32(0) {
+        if magnitude_of_time_that_passed > V::from_i64(0) {
 
-            // CURRENT_VALUE ADDITION OR SUBTRACTION?
-            // Increase or decrease current_value's new host based on if the ticker is ticking up or down.
-            let new_value = match self.is_ticking_up {
-                true  => self.current_value.sat_add(magnitude_of_time_that_passed),
-                false => self.current_value.sat_sub(magnitude_of_time_that_passed),
+            // VALUE ADDITION OR SUBTRACTION?
+            // Increase or decrease current_value based on if the ticker is ticking up or down.
+            match self.is_ticking_up {
+                true  => self.set_count().add_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
+                false => self.set_count().subtract_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
             };
-
-            // DETERMINING CURRENT_VALUE'S BOUNDARIES
-            // Since start_value and end_value can be either negative or positive at any given moment,
-            // we must throw both values against one another to determine whose greater/lesser than
-            // the other so that we can properly clamp down current_value to its allowed range.
-            let min = self.start_value.min(self.end_value);
-            let max = self.start_value.max(self.end_value);
 
             // RESET DETERMINATION + CURRENT_VALUE ASSIGNMENT
             // Will change current_value's assignment using new_value based on a ticker's behavior.
             match self.behavior {
 
                 // LOOPER LOGIC
-                // Assign current_value to its new host and then reset it to the ticker's start_value
-                // if either of its boundaries - start_value and end_value - are hit.
+                // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
                 TickerBehaviors::Looper |
                 TickerBehaviors::MutLooper => {
-                    self.current_value = new_value;
-                    if self.current_value <= min || self.current_value >= max {
-                        self.current_value = self.start_value;
+                    if (self.count().value() == self.count().lower_bound()) || (self.count().value() == self.count().upper_bound()) {
+                        let anchor_value: V = self.count().anchor();
+                        self.set_count().set_value_with_clamp(anchor_value);
                     }
                 },
 
                 // ONESHOT + FREEZING LOGIC
-                // current_value can assume its new host after new_value has been clamped to the allowed range.
-                // Additionally, stored_time will be zeroed out if current_value hits end_value.  We
+                // stored_time will be zeroed out if value hits a bound.  We
                 // do this wipe for stored_time since oneshotters and freezings are purposed to clear their
-                // time storage upon hitting their end destination.
+                // time storage upon hitting a boundary.
                 TickerBehaviors::Oneshot |
                 TickerBehaviors::MutOneshot |
                 TickerBehaviors::Freezing => {
-                    self.current_value = new_value.clamp(min, max);
-                    if self.current_value == self.end_value {
+                    if (self.count().value() == self.count().lower_bound()) || (self.count().value() == self.count().upper_bound()) {
                         self.stored_time = P::from_f64(0.0);
                     }
                 },
@@ -1239,15 +1222,13 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             TickerBehaviors::MutLooper  => true,
             TickerBehaviors::Oneshot    => false,
             TickerBehaviors::MutOneshot => true,
-            TickerBehaviors::Freezing   => self.current_value != self.end_value,
+            TickerBehaviors::Freezing   => (self.count().value() != self.count().lower_bound()) && (self.count().value() != self.count().upper_bound()),
         }
     }
 
     /// Will print out all the fields and their values of a ticker.
     pub fn print_information(&self) {
-        println!("START_VALUE: {}", self.start_value);
-        println!("CURRENT_VALUE: {}", self.current_value);
-        println!("END_VALUE: {}", self.end_value);
+        self.count().print_information();
         println!("TIME_INTERVAL: {}", self.time_interval);
         println!("STORED_TIME: {}", self.stored_time);
         println!("IS_PAUSED: {}", self.is_paused);
@@ -1263,7 +1244,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 // ##################################### PANIC FUNCTIONS ######################################## //
 /// Used to cause a `PANIC` when something attempts to mutate an immutable ticker.
 /// The printed message will explain the ways to avoid the `PANIC`.
-fn panic_and_print_mutability_message() {
+fn panic_and_print_mutability_message() -> ! {
     panic!(
         "{}[TICKER PANIC]{} You are attempting to mutate an immutable Ticker.  You can avoid this panic in 3 different ways:
         1. Change the behavior of the ticker to be mutable through constructing a copy using the new_copy_with_behavior_change constructor, and then replace the immutable version with the mutable copy.
@@ -1271,26 +1252,4 @@ fn panic_and_print_mutability_message() {
         3. Do a mutation state check using .is_mutable() on a ticker before attempting to mutate it.",
         "\x1b[31m", "\x1b[0m",
     )
-}
-
-/// Checks if a value falls within the provided minimum and maximum range (inclusive), will `PANIC` if the value is outside the provided range.
-/// If a `PANIC` were to occur, a printed message will be displayed to explain how to avoid the `PANIC`.
-///
-/// Accepts any type that implements [`PartialOrd`] and [`Display`], meaning
-/// all numeric primitives, [`char`], [`String`], and [`&str`] are valid inputs.
-///
-/// #### Example
-/// ```ignore
-/// check_if_value_is_within_range(5, 1, 10);    // Passes
-/// check_if_value_is_within_range(15, 1, 10);   // Panics
-/// ```
-fn check_if_value_is_within_range<T: PartialOrd + Display>(value: T, minimum: T, maximum: T) {
-    assert!(
-        value >= minimum && value <= maximum,
-        "{}[TICKER PANIC]{} Ticker value must be between {} and {} (inclusive). Got {}.  You can avoid this panic by doing the following:
-        1. Make sure your Ticker constructor has the current_value set to a number that is between start_value and end_value (inclusive).
-        2. Make sure your Ticker constructor has the start_value set to a number that is between CountValue::MIN and CountValue::MAX (inclusive).
-        3. Make sure your Ticker constructor has the end_value set to a number that is between CountValue::MIN and CountValue::MAX (inclusive).",
-        "\x1b[31m", "\x1b[0m", minimum, maximum, value
-    );
 }
