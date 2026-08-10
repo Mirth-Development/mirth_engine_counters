@@ -16,65 +16,8 @@ use crate::{Count, CountMarker, CountValue};
 /// assignment on value types will always add 1 to an integer's minimum to avoid things like -128 in
 /// the i8 primitive becoming 128 after .absolute() is applied to a value.  We have to do this since
 /// 128 is outside the i8 range; 127 is the max for i8.
-pub trait TickerValue:
-Copy                    // TickerValue types are integers, which means they're safe to copy.
-+ Ord                   // TickerValue types are integers, hence Ord is necessary for comparison.
-+ Display               // Making it so values can be printed to the console.
-+ Add<Output = Self>
-+ Sub<Output = Self>
-+ Div<Output = Self>
-+ Rem<Output = Self>
-+ Send                  // Needed for Bevy queries; also lets Tickers move safely across threads.
-+ Sync                  // Needed for Bevy queries; also lets Tickers be shared safely across threads.
-+ 'static               // Needed for Bevy queries; also enforces that TickerValue types own their data, with no borrowed lifetimes.
-{
-    const MIN: Self;
-    const MAX: Self;
-    fn absolute(self)               -> Self;
-    fn sat_add(self, value: Self)   -> Self;
-    fn sat_sub(self, value: Self)   -> Self;
-    fn as_f64(self)                 -> f64;
-    fn as_i8(self)                  -> i8;
-    fn as_i64(self)                 -> i64;
-    fn from_f64(value: f64)         -> Self;
-    fn from_i32(val: i32)           -> Self;
-}
-impl TickerValue for i8 {
-    const MIN: Self                 = i8::MIN + 1;
-    const MAX: Self                 = i8::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn sat_sub(self, value: Self)   -> Self { self.saturating_sub(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i8 }
-    fn from_i32(value: i32)         -> Self { value as i8 }
-}
-impl TickerValue for i16 {
-    const MIN: Self                 = i16::MIN + 1;
-    const MAX: Self                 = i16::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn sat_sub(self, value: Self)   -> Self { self.saturating_sub(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self as i8 }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i16 }
-    fn from_i32(value: i32)         -> Self { value as i16 }
-}
-impl TickerValue for i32 {
-    const MIN: Self                 = i32::MIN + 1;
-    const MAX: Self                 = i32::MAX;
-    fn absolute(self)               -> Self { self.abs() }
-    fn sat_add(self, value: Self)   -> Self { self.saturating_add(value) }
-    fn sat_sub(self, value: Self)   -> Self { self.saturating_sub(value) }
-    fn as_f64(self)                 -> f64  { self as f64 }
-    fn as_i8(self)                  -> i8   { self as i8 }
-    fn as_i64(self)                 -> i64  { self as i64 }
-    fn from_f64(value: f64)         -> Self { value as i32 }
-    fn from_i32(value: i32)         -> Self { value }
-}
+// pub trait TickerValue:
+
 
 
 // ################################## TickerPrecision TRAIT ##################################### //
@@ -109,15 +52,28 @@ Copy                    // TickerPrecision types are floats, which means they're
 + Sync                  // Needed for Bevy queries; also lets Tickers be shared safely across threads.
 + 'static               // Needed for Bevy queries; also enforces that TickerPrecision types own their data, with no borrowed lifetimes.
 {
+    /// Text
     const MIN_POSITIVE: Self;
+
+    /// Text
     const MAX: Self;
+
+    /// Text
+    fn absolute(self) -> Self;
+
+    /// Text
     fn clamp(self, min: Self, max: Self)    -> Self;
+
+    /// Text
     fn as_f64(self)                         -> f64;
+
+    /// Text
     fn from_f64(value: f64)                 -> Self;
 }
 impl TickerPrecision for f16 {
     const MIN_POSITIVE: Self                =   f16::MIN_POSITIVE;
     const MAX: Self                         =   f16::MAX;
+    fn absolute(self)                       ->  Self { if self < f16::from_f32(0.0) { -self } else { self } }
     fn clamp(self, min: Self, max: Self)    ->  Self { self.clamp(min, max) }
     fn as_f64(self)                         ->  f64  { self.to_f64() }
     fn from_f64(value: f64)                 ->  Self { f16::from_f64(value) }
@@ -125,6 +81,7 @@ impl TickerPrecision for f16 {
 impl TickerPrecision for f32 {
     const MIN_POSITIVE: Self                =   f32::MIN_POSITIVE;
     const MAX: Self                         =   f32::MAX;
+    fn absolute(self)                       ->  Self { self.abs() }
     fn clamp(self, min: Self, max: Self)    ->  Self { self.clamp(min, max) }
     fn as_f64(self)                         ->  f64  { self as f64 }
     fn from_f64(value: f64)                 ->  Self { value as f32 }
@@ -132,6 +89,7 @@ impl TickerPrecision for f32 {
 impl TickerPrecision for f64 {
     const MIN_POSITIVE: Self                =   f64::MIN_POSITIVE;
     const MAX: Self                         =   f64::MAX;
+    fn absolute(self)                       ->  Self { self.abs() }
     fn clamp(self, min: Self, max: Self)    ->  Self { self.clamp(min, max) }
     fn as_f64(self)                         ->  f64  { self }
     fn from_f64(value: f64)                 ->  Self { value }
@@ -1122,10 +1080,17 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             // inside the variable "magnitude_of_time_that_passed_in_active_precision".
             // After that the value gets truncated using V::from_f64 since all V types are integers.
             true => {
-                let magnitude_of_time_that_passed_in_active_precision: P = self.stored_time / self.time_interval;
-                let magnitude_of_time_that_passed_truncated_to_value_type: V = V::from_f64(magnitude_of_time_that_passed_in_active_precision.as_f64());
-                self.stored_time %= self.time_interval; // Carrying remainder over to keep ticking accuracy.
-                magnitude_of_time_that_passed_truncated_to_value_type
+
+                // WHAT HAPPENS WHEN TIME_INTERVAL HITS 0.0?
+                if self.time_interval == P::from_f64(0.0) {
+
+                }
+                else {
+                    let magnitude_of_time_that_passed_in_active_precision: P = self.stored_time / self.time_interval;
+                    let magnitude_of_time_that_passed_in_value_type: V = V::from_f64(magnitude_of_time_that_passed_in_active_precision.as_f64());
+                    self.stored_time %= self.time_interval.absolute(); // Carrying remainder over to keep ticking accuracy.
+                    magnitude_of_time_that_passed_in_value_type
+                }
             },
 
             // PASSED TIME WHEN ~NOT~ HANDLING TIME SPIKES
@@ -1161,39 +1126,41 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         // don't count.
         if magnitude_of_time_that_passed > V::from_i64(0) {
 
+            // ##########
+            // UNSIGNED TYPES WILL REQUIRE SUBTRACTION HERE.  NEED TO ADD UNSIGNED_INT AND SIGNED_INT TO COUNT_VALUE TRAIT
+            // ##########
+
             // VALUE ADDITION OR SUBTRACTION?
             // Increase or decrease current_value based on if the ticker is ticking up or down.
-            match self.is_ticking_up {
-                true  => self.set_count().add_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
-                false => self.set_count().subtract_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
-            };
+            self.set_count().add_with_clamp(magnitude_of_time_that_passed, CountMarker::Value);
 
-            // RESET DETERMINATION + CURRENT_VALUE ASSIGNMENT
-            // Will change current_value's assignment using new_value based on a ticker's behavior.
-            match self.behavior {
+            // DETERMINE IF AN ACTIVE BOUNDARY WAS HIT
+            if ((self.count().value() == self.count().lower_bound()) && self.count().is_lower_bound_active()) ||
+                ((self.count().value() == self.count().upper_bound()) && self.count().is_upper_bound_active()) {
 
-                // LOOPER LOGIC
-                // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
-                TickerBehaviors::Looper |
-                TickerBehaviors::MutLooper => {
-                    if (self.count().value() == self.count().lower_bound()) || (self.count().value() == self.count().upper_bound()) {
+                // RESET DETERMINATION
+                // Will reset stored_time or the Count's value based on a ticker's behavior.
+                match self.behavior {
+
+                    // LOOPER LOGIC
+                    // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
+                    TickerBehaviors::Looper |
+                    TickerBehaviors::MutLooper => {
                         let anchor_value: V = self.count().anchor();
                         self.set_count().set_value_with_clamp(anchor_value);
-                    }
-                },
+                    },
 
-                // ONESHOT + FREEZING LOGIC
-                // stored_time will be zeroed out if value hits a bound.  We
-                // do this wipe for stored_time since oneshotters and freezings are purposed to clear their
-                // time storage upon hitting a boundary.
-                TickerBehaviors::Oneshot |
-                TickerBehaviors::MutOneshot |
-                TickerBehaviors::Freezing => {
-                    if (self.count().value() == self.count().lower_bound()) || (self.count().value() == self.count().upper_bound()) {
+                    // ONESHOT + FREEZING LOGIC
+                    // stored_time will be zeroed out if value hits an active bound.  We
+                    // do this wipe for stored_time since oneshotters and freezings are purposed to clear their
+                    // time storage upon hitting an active boundary.
+                    TickerBehaviors::Oneshot |
+                    TickerBehaviors::MutOneshot |
+                    TickerBehaviors::Freezing => {
                         self.stored_time = P::from_f64(0.0);
-                    }
-                },
-            };
+                    },
+                };
+            }
         }
     }
     // ############################################################################################## //
