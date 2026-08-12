@@ -651,7 +651,6 @@ impl CountValue for f32 {
 
     fn sat_add(self, value: Self) -> Self
     { (self + value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
-
     fn sat_subtract(self, value: Self) -> Self
     { (self - value).clamp(<Self as CountValue>::MIN, <Self as CountValue>::MAX) }
 
@@ -1321,7 +1320,7 @@ impl<V: CountValue> Count<V> {
     ///
     /// `place` is 1-indexed from the decimal point (`1` = tenths, `2` = hundredths, etc.).
     /// Returns `None` if `place` is `0` or exceeds `V::MAX_FLOATING_PLACES` for this type.
-    pub fn get_floating_digit_in_memory(
+    pub fn get_floating_digit(
         &self,
         place: u8,
         marker: CountMarker,
@@ -1465,7 +1464,8 @@ impl<V: CountValue> Count<V> {
         V::from_f64(((end - start) * modified_percentage) + start)
     }
 
-    pub fn are_markers_equal(
+    ///
+    pub fn is_equal(
         &self,
         marker_1: CountMarker,
         marker_2: CountMarker,
@@ -1473,7 +1473,47 @@ impl<V: CountValue> Count<V> {
         self.marker_value(marker_1) == self.marker_value(marker_2)
     }
 
+    ///
+    pub fn is_at_lower_limit(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        match marker {
+            CountMarker::Anchor |
+            CountMarker::Value => (value == self.lower_bound) && self.is_lower_bound_active,
+            CountMarker::LowerBound => value == V::MIN,
+            CountMarker::UpperBound => value == self.lower_bound,
+        }
+    }
 
+    ///
+    pub fn is_at_upper_limit(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        match marker {
+            CountMarker::Anchor |
+            CountMarker::Value => (value == self.upper_bound) && self.is_upper_bound_active,
+            CountMarker::LowerBound => value == self.upper_bound,
+            CountMarker::UpperBound => value == V::MAX,
+        }
+    }
+
+    ///
+    pub fn is_at_a_limit(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        match marker {
+            CountMarker::Anchor |
+            CountMarker::Value => ((value == self.lower_bound) && self.is_lower_bound_active) || ((value == self.upper_bound) && self.is_upper_bound_active),
+            CountMarker::LowerBound => (value == V::MIN) || (value == self.upper_bound),
+            CountMarker::UpperBound => (value == self.lower_bound) || (value == V::MAX),
+        }
+    }
 
     // #################################### HELPER METHODS ###################################### //
     ///
