@@ -33,14 +33,19 @@ fn spawn_custom_ticker(mut commands: Commands) {
     // Remember to declare mutability if you want to make use of methods that change the ticker's
     // fields, or you can make use of the copy constructors.
     let mut ticker: Ticker<i8, f16> = Ticker::new(
-        0,
-        5,
-        100,
+        Count::new(
+            0,
+            0,
+            0,
+            10,
+            true,
+            true,
+        ),
         f16::from_f32(1.0),
         false,
         true,
         true,
-        TickerBehaviors::Looper,
+        TickerBehavior::Looper,
     );
 
     commands.spawn(ticker);

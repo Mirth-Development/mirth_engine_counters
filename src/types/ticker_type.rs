@@ -5,7 +5,7 @@ use bevy_reflect::Reflect;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
-use crate::{Count, CountMarker, CountValue};
+use crate::{Count, CountMarker, CountValue, Operation};
 
 /// Used for implementing the `V` generic to define integer primitives a Ticker can store for its `start_value`, `end_value`, and `current_value`.
 ///
@@ -66,7 +66,7 @@ Copy                    // TickerPrecision types are floats, which means they're
     fn clamp(self, min: Self, max: Self) -> Self;
 
     ///
-    fn power_with_positive_clamp(self, value: Self) -> Self;
+    fn power(self, value: Self) -> Self;
 
     /// Text
     fn as_f64(self) -> f64;
@@ -85,8 +85,8 @@ impl TickerPrecision for f16 {
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
 
-    fn power_with_positive_clamp(self, value: Self) -> Self
-    { f16::from_f32(self.to_f32().powf(value.to_f32())).clamp(Self::MIN_POSITIVE, Self::MAX) }
+    fn power(self, value: Self) -> Self
+    { f16::from_f32(self.to_f32().powf(value.to_f32())) }
 
     fn as_f64(self) -> f64
     { self.to_f64() }
@@ -105,8 +105,8 @@ impl TickerPrecision for f32 {
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
 
-    fn power_with_positive_clamp(self, value: Self) -> Self
-    { self.powf(value).clamp(Self::MIN_POSITIVE, Self::MAX) }
+    fn power(self, value: Self) -> Self
+    { self.powf(value) }
 
     fn as_f64(self) -> f64
     { self as f64 }
@@ -125,8 +125,8 @@ impl TickerPrecision for f64 {
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
 
-    fn power_with_positive_clamp(self, value: Self) -> Self
-    { self.powf(value).clamp(Self::MIN_POSITIVE, Self::MAX) }
+    fn power(self, value: Self) -> Self
+    { self.powf(value) }
 
     fn as_f64(self) -> f64
     { self }
@@ -905,114 +905,47 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     pub fn set_behavior(&mut self, new_behavior: TickerBehavior) {
         self.behavior = new_behavior;
     }
-    // ######################################################################################## //
-
-
-
-    // ################################### SUM METHODS ######################################## //
-
-    /// Adds to the `time_interval` of the ticker by the passed value.  Can take in negatives for subtraction.
-    #[inline]
-    pub fn add_to_time_interval(&mut self, value: P) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "adding", value);
-
-        if self.is_runtime_mutable() {
-            self.time_interval = (self.time_interval + value).clamp(P::MIN_POSITIVE, P::MAX);
-        }
-        else {
-            panic_and_print_mutability_message("time_interval", "add_to_time_interval()");
-        }
-    }
-
-    /// Text
-    #[inline]
-    pub fn subtract_from_time_interval(&mut self, value: P) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "subtracting", value);
-
-        if self.is_runtime_mutable() {
-            self.time_interval = (self.time_interval - value).clamp(P::MIN_POSITIVE, P::MAX);
-        }
-        else {
-            panic_and_print_mutability_message("time_interval", "subtract_from_time_interval()");
-        }
-    }
-
-    /// Text
-    #[inline]
-    pub fn multiply_time_interval(&mut self, value: P) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "multiplying", value);
-
-        if self.is_runtime_mutable() {
-            self.time_interval = (self.time_interval * value).clamp(P::MIN_POSITIVE, P::MAX);
-        }
-        else {
-            panic_and_print_mutability_message("time_interval", "multiply_time_interval()");
-        }
-    }
-
-    /// MUST ADD AVOIDER FOR DIVIDE BY 0
-    #[inline]
-    pub fn divide_time_interval(&mut self, value: P) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "dividing", value);
-        panic_if_zero("time_interval", "dividing", value);
-
-        if self.is_runtime_mutable() {
-            self.time_interval = (self.time_interval / value).clamp(P::MIN_POSITIVE, P::MAX);
-        }
-        else {
-            panic_and_print_mutability_message("time_interval", "divide_time_interval()");
-        }
-    }
-
-    ///
-    #[inline]
-    pub fn power_time_interval(&mut self, value: P) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "exponentiating", value);
-
-        if self.is_runtime_mutable() {
-            self.time_interval = self.time_interval.power_with_positive_clamp(value);
-        }
-        else {
-            panic_and_print_mutability_message("time_interval", "power_time_interval()");
-        }
-    }
     // ########################################################################################## //
 
 
 
-    // ##################################### RESET METHODS ###################################### //
+    // ################################ MISCELLANEOUS METHODS ################################### //
     ///
     #[inline]
-    pub fn soft_reset(&mut self) {
+    pub fn operate_on_time_interval(
+        &mut self,
+        operation: Operation,
+        value: P
+    ) {
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "operating on", value);
+
         if self.is_runtime_mutable() {
-            let anchor_value: V = self.count().anchor();
-            self.set_count().set_value_with_clamp(anchor_value);
+            match operation {
+                Operation::Add      => self.time_interval = (self.time_interval + value).clamp(P::MIN_POSITIVE, P::MAX),
+                Operation::Subtract => self.time_interval = (self.time_interval - value).clamp(P::MIN_POSITIVE, P::MAX),
+                Operation::Multiply => self.time_interval = (self.time_interval * value).clamp(P::MIN_POSITIVE, P::MAX),
+                Operation::Power    => self.time_interval = self.time_interval.power(value).clamp(P::MIN_POSITIVE, P::MAX),
+                Operation::Divide   => {
+                    panic_if_zero("time_interval", "dividing", value);
+                    self.time_interval = (self.time_interval / value).clamp(P::MIN_POSITIVE, P::MAX);
+                },
+            }
         }
         else {
-            panic_and_print_mutability_message("Count's value", "soft_reset()");
+            panic_and_print_mutability_message("time_interval", "operate_on_time_interval()");
         }
     }
 
     ///
     #[inline]
-    pub fn hard_reset(&mut self) {
+    pub fn reset(&mut self) {
         if self.is_runtime_mutable() {
-            let anchor_value: V = self.count().anchor();
-            self.set_count().set_value_with_clamp(anchor_value);
+            self.count.set_marker_with_limits(CountMarker::Anchor, self.count.anchor());
             self.stored_time = P::from_f64(0.0);
         }
         else {
-            panic_and_print_mutability_message("stored_time and Count's value", "hard_reset()");
+            panic_and_print_mutability_message("stored_time and Count's value", "reset()");
         }
     }
     // ########################################################################################## //
@@ -1159,13 +1092,13 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             // VALUE ADDITION OR SUBTRACTION?
             // Increase or decrease current_value based on if the ticker is ticking up or down.
             match self.is_ticking_up {
-                true  => self.set_count().add_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
-                false => self.set_count().subtract_with_clamp(magnitude_of_time_that_passed, CountMarker::Value),
+                true  => self.count.operate_with_limits(Operation::Add, CountMarker::Value, magnitude_of_time_that_passed),
+                false => self.count.operate_with_limits(Operation::Subtract, CountMarker::Value, magnitude_of_time_that_passed),
             }
 
             // DETERMINE IF AN ACTIVE BOUNDARY WAS HIT
-            if self.count().is_at_lower_limit(CountMarker::Value) ||
-               self.count().is_at_upper_limit(CountMarker::Value) {
+            if self.count.is_at_lower_limit(CountMarker::Value) ||
+               self.count.is_at_upper_limit(CountMarker::Value) {
 
                 // RESET DETERMINATION
                 // Will reset stored_time or the Count's value based on a ticker's behavior.
@@ -1175,8 +1108,8 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
                     // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
                     TickerBehavior::Looper |
                     TickerBehavior::MutLooper => {
-                        let anchor_value: V = self.count().anchor();
-                        self.set_count().set_value_with_clamp(anchor_value);
+                        let anchor_value: V = self.count.anchor();
+                        self.count.set_marker_with_limits(CountMarker::Value, anchor_value);
                     },
 
                     // ONESHOT + FREEZING LOGIC
@@ -1218,13 +1151,13 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             TickerBehavior::MutLooper  => true,
             TickerBehavior::Oneshot    => false,
             TickerBehavior::MutOneshot => true,
-            TickerBehavior::Freezing   => !self.count().is_at_a_limit(CountMarker::Value),
+            TickerBehavior::Freezing   => !self.count.is_at_a_limit(CountMarker::Value),
         }
     }
 
     /// Will print out all the fields and their values of a ticker.
     pub fn print_information(&self) {
-        self.count().print_information();
+        self.count.print_information();
         println!("TIME_INTERVAL: {}", self.time_interval);
         println!("STORED_TIME: {}", self.stored_time);
         println!("IS_PAUSED: {}", self.is_paused);

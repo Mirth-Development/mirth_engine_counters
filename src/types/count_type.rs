@@ -5,6 +5,7 @@ use bevy_reflect::prelude::*;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Div, Mul, Rem, Sub};
 use half::f16;
+use crate::types::operation_type::Operation;
 
 // ##################################### CountValue TRAIT ####################################### //
 ///
@@ -694,19 +695,6 @@ impl CountValue for f32 {
     { value as f32 }
 }
 
-// ###################################### Operations ENUM ####################################### //
-///
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "operations_serialize", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "operations_reflect", derive(Reflect), reflect(Clone, PartialEq))]
-pub enum Operation {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Power,
-}
-
 // ###################################### CountMarker ENUM ###################################### //
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -719,7 +707,15 @@ pub enum CountMarker {
     UpperBound,
 }
 
-
+// ####################################### CountBound ENUM ###################################### //
+///
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "count_serialize", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "count_reflect", derive(Reflect), reflect(Clone, PartialEq))]
+pub enum CountBound {
+    Lower,
+    Upper,
+}
 
 // ######################################## CountError ENUM ##################################### //
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -932,189 +928,92 @@ impl<V: CountValue> Count<V> {
         match marker {
 
             CountMarker::Anchor => {
-                // Throw an error if the passed value is below the lower limit or above the upper limit.
-                // Otherwise, assign the anchor to the passed value after clamping it to the datatype's range.
                 if      (value < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerLimit{ value, limit: self.lower_bound, name_of_value: "anchor" }); }
                 else if (value > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperLimit{ value, limit: self.upper_bound, name_of_value: "anchor" }); }
-                self.anchor = value.count_clamp(V::MIN, V::MAX);
+                else if value < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit{ value, limit: V::MIN, name_of_value: "anchor" }); }
+                else if value < V::MAX { return Err(CountError::<V>::ExceedsUpperLimit{ value, limit: V::MAX, name_of_value: "anchor" }); }
+                self.anchor = value;
             }
 
             CountMarker::Value => {
-
+                if      (value < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerLimit{ value, limit: self.lower_bound, name_of_value: "value" }); }
+                else if (value > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperLimit{ value, limit: self.upper_bound, name_of_value: "value" }); }
+                else if value < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit{ value, limit: V::MIN, name_of_value: "value" }); }
+                else if value < V::MAX { return Err(CountError::<V>::ExceedsUpperLimit{ value, limit: V::MAX, name_of_value: "value" }); }
+                self.value = value;
             }
 
             CountMarker::LowerBound => {
-
+                if      value > self.upper_bound { return Err(CountError::<V>::ExceedsUpperLimit { value, limit: self.upper_bound, name_of_value: "lower_bound" }); }
+                else if value < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit{ value, limit: V::MIN, name_of_value: "lower_bound" }); }
+                self.lower_bound = value;
+                self.enforce_bounds();
             }
 
             CountMarker::UpperBound => {
-
+                if      value < self.lower_bound { return Err(CountError::<V>::ExceedsLowerLimit { value, limit: self.lower_bound, name_of_value: "upper_bound" }); }
+                else if value > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit{ value, limit: V::MAX, name_of_value: "upper_bound" }); }
+                self.upper_bound = value;
+                self.enforce_bounds();
             }
         }
+
         Ok(())
     }
 
-    ///
-    pub fn set_value(&mut self, new_value: V) -> Result<(), CountError<V>> {
+    pub fn set_marker_with_limits(
+        &mut self,
+        marker: CountMarker,
+        value: V,
+    ) {
 
         // PANIC EVALUATION
-        panic_if_is_nan("value", "setting", new_value);
+        panic_if_is_nan(self.marker_name(marker), "setting", value);
 
-        // Throw an error if the passed value is below an activated lower_bound.
-        if (new_value < self.lower_bound) && self.is_lower_bound_active {
-            return Err(CountError::<V>::ExceedsLowerBound{
-                value: new_value,
-                boundary: self.lower_bound,
-                name_of_value: "value",
-            });
+        match marker {
+
+            CountMarker::Anchor => {
+                let lower_limit = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+                let upper_limit = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+                self.anchor = value.count_clamp(lower_limit, upper_limit);
+            }
+
+            CountMarker::Value => {
+                let lower_limit = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+                let upper_limit = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+                self.value = value.count_clamp(lower_limit, upper_limit);
+            }
+
+            CountMarker::LowerBound => {
+                self.lower_bound = value.count_clamp(V::MIN, self.upper_bound);
+                self.enforce_bounds();
+            }
+
+            CountMarker::UpperBound => {
+                self.lower_bound = value.count_clamp(self.lower_bound, V::MAX);
+                self.enforce_bounds();
+            }
         }
+    }
 
-        // Throw an error if the passed value is above an activated upper_bound.
-        else if (new_value > self.upper_bound) && self.is_upper_bound_active {
-            return Err(CountError::<V>::ExceedsUpperBound{
-                value: new_value,
-                boundary: self.upper_bound,
-                name_of_value: "value",
-            });
+    ///
+    #[inline]
+    pub fn activate_bound(&mut self, bound: CountBound) {
+        match bound {
+            CountBound::Lower => self.is_lower_bound_active = true,
+            CountBound::Upper => self.is_upper_bound_active = true,
         }
-
-        self.value = new_value.count_clamp(V::MIN, V::MAX);
-        Ok(())
+        self.enforce_bounds();
     }
 
-    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
-    pub fn set_lower_bound(&mut self, value: V) -> Result<(), CountError<V>> {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("lower_bound", "setting", value);
-
-        // Throw an error if the passed value is above the upper_bound.
-        if value > self.upper_bound {
-            return Err(CountError::<V>::ExceedsUpperBound {
-                value,
-                boundary: self.upper_bound,
-                name_of_value: "lower_bound",
-            });
+    ///
+    #[inline]
+    pub fn deactivate_bound(&mut self, bound: CountBound) {
+        match bound {
+            CountBound::Lower => self.is_lower_bound_active = false,
+            CountBound::Upper => self.is_upper_bound_active = false,
         }
-
-        self.lower_bound = value.count_clamp(V::MIN, V::MAX);
-        self.enforce_bounds();
-        Ok(())
     }
-
-    /// ANY ACTIVE BOUNDS ARE ENFORCED AFTERWARDS
-    pub fn set_upper_bound(&mut self, value: V) -> Result<(), CountError<V>> {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("upper_bound", "setting", value);
-
-        // Throw an error if the passed value is below the lower_bound.
-        if value < self.lower_bound {
-            return Err(CountError::<V>::ExceedsLowerBound {
-                value,
-                boundary: self.lower_bound,
-                name_of_value: "upper_bound",
-            });
-        }
-
-        self.upper_bound = value.count_clamp(V::MIN, V::MAX);
-        self.enforce_bounds();
-        Ok(())
-    }
-
-    ///
-    pub fn set_value_with_clamp(&mut self, new_value: V) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("value", "setting", new_value);
-
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Reassign value to the clamped passed value that is following the active bounds.
-        self.value = new_value.count_clamp(active_lower_bound, active_upper_bound);
-    }
-
-    ///
-    pub fn set_anchor_with_clamp(&mut self, value: V) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("anchor", "setting", value);
-
-        // Determine the active bounds.
-        // If a bound is inactive, they are replaced by V::MIN or V::MAX depending on which bound is inactive.
-        let active_lower_bound = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-        let active_upper_bound = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-
-        // Reassign anchor to the clamped passed value that is following the active bounds.
-        self.anchor = value.count_clamp(active_lower_bound, active_upper_bound);
-    }
-
-    ///
-    pub fn set_lower_bound_with_clamp(&mut self, value: V) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("lower_bound", "setting", value);
-
-        // Reassign lower_bound to the clamped range of V::MIN to upper_bound.
-        // Doing this to ensure that lower_bound always stays within its allowable range.
-        self.lower_bound = value.count_clamp(V::MIN, self.upper_bound);
-    }
-
-    ///
-    pub fn set_upper_bound_with_clamp(&mut self, value: V) {
-
-        // PANIC EVALUATION
-        panic_if_is_nan("upper_bound", "setting", value);
-
-        // Reassign upper_bound to the clamped range of lower_bound to V::MAX.
-        // Doing this to ensure that upper_bound always stays within its allowable range.
-        self.upper_bound = value.count_clamp(self.lower_bound, V::MAX);
-    }
-
-    ///
-    #[inline]
-    pub fn activate_lower_bound(&mut self) {
-        self.is_lower_bound_active = true;
-        self.enforce_bounds();
-    }
-
-    ///
-    #[inline]
-    pub fn activate_upper_bound(&mut self) {
-        self.is_upper_bound_active = true;
-        self.enforce_bounds();
-    }
-
-    ///
-    #[inline]
-    pub fn deactivate_lower_bound(&mut self) {
-        self.is_lower_bound_active = false;
-    }
-
-    ///
-    #[inline]
-    pub fn deactivate_upper_bound(&mut self) {
-        self.is_upper_bound_active = false;
-    }
-
-    ///
-    #[inline]
-    pub fn activate_bounds(&mut self) {
-        self.is_lower_bound_active = true;
-        self.is_upper_bound_active = true;
-        self.enforce_bounds();
-    }
-
-    ///
-    #[inline]
-    pub fn deactivate_bounds(&mut self) {
-        self.is_lower_bound_active = false;
-        self.is_upper_bound_active = false;
-    }
-
 
 
     // ################################### MARKER METHODS ##################################### //
@@ -1135,47 +1034,47 @@ impl<V: CountValue> Count<V> {
 
             Operation::Add => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_add(value)) }
-                    CountMarker::Value         => { self.set_value(self.value.sat_add(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_add(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_add(value)) }
+                    CountMarker::Anchor        => { self.set_marker(CountMarker::Anchor, self.anchor.sat_add(value)) }
+                    CountMarker::Value         => { self.set_marker(CountMarker::Value, self.value.sat_add(value)) }
+                    CountMarker::LowerBound    => { self.set_marker(CountMarker::LowerBound, self.lower_bound.sat_add(value)) }
+                    CountMarker::UpperBound    => { self.set_marker(CountMarker::UpperBound, self.upper_bound.sat_add(value)) }
                 }
             }
 
             Operation::Subtract => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_subtract(value)) }
-                    CountMarker::Value         => { self.set_value(self.value.sat_subtract(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_subtract(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_subtract(value)) }
+                    CountMarker::Anchor        => { self.set_marker(CountMarker::Anchor, self.anchor.sat_subtract(value)) }
+                    CountMarker::Value         => { self.set_marker(CountMarker::Value, self.value.sat_subtract(value)) }
+                    CountMarker::LowerBound    => { self.set_marker(CountMarker::LowerBound, self.lower_bound.sat_subtract(value)) }
+                    CountMarker::UpperBound    => { self.set_marker(CountMarker::UpperBound, self.upper_bound.sat_subtract(value)) }
                 }
             }
 
             Operation::Multiply => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_multiply(value)) }
-                    CountMarker::Value         => { self.set_value(self.value.sat_multiply(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_multiply(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_multiply(value)) }
+                    CountMarker::Anchor        => { self.set_marker(CountMarker::Anchor, self.anchor.sat_multiply(value)) }
+                    CountMarker::Value         => { self.set_marker(CountMarker::Value, self.value.sat_multiply(value)) }
+                    CountMarker::LowerBound    => { self.set_marker(CountMarker::LowerBound, self.lower_bound.sat_multiply(value)) }
+                    CountMarker::UpperBound    => { self.set_marker(CountMarker::UpperBound, self.upper_bound.sat_multiply(value)) }
                 }
             }
 
             Operation::Divide => {
                 panic_if_zero(self.marker_name(marker), "dividing", value);
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_divide(value)) }
-                    CountMarker::Value         => { self.set_value(self.value.sat_divide(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_divide(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_divide(value)) }
+                    CountMarker::Anchor        => { self.set_marker(CountMarker::Anchor, self.anchor.sat_divide(value)) }
+                    CountMarker::Value         => { self.set_marker(CountMarker::Value, self.value.sat_divide(value)) }
+                    CountMarker::LowerBound    => { self.set_marker(CountMarker::LowerBound, self.lower_bound.sat_divide(value)) }
+                    CountMarker::UpperBound    => { self.set_marker(CountMarker::UpperBound, self.upper_bound.sat_divide(value)) }
                 }
             }
 
             Operation::Power => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor(self.anchor.sat_power(value)) }
-                    CountMarker::Value         => { self.set_value(self.value.sat_power(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound(self.lower_bound.sat_power(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound(self.upper_bound.sat_power(value)) }
+                    CountMarker::Anchor        => { self.set_marker(CountMarker::Anchor, self.anchor.sat_power(value)) }
+                    CountMarker::Value         => { self.set_marker(CountMarker::Value, self.value.sat_power(value)) }
+                    CountMarker::LowerBound    => { self.set_marker(CountMarker::LowerBound, self.lower_bound.sat_power(value)) }
+                    CountMarker::UpperBound    => { self.set_marker(CountMarker::UpperBound, self.upper_bound.sat_power(value)) }
                 }
             }
         }
@@ -1183,7 +1082,7 @@ impl<V: CountValue> Count<V> {
 
     ///
     #[inline]
-    pub fn operate_with_clamp(
+    pub fn operate_with_limits(
         &mut self,
         operation: Operation,
         marker: CountMarker,
@@ -1197,47 +1096,47 @@ impl<V: CountValue> Count<V> {
 
             Operation::Add => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_add(value)) }
-                    CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_add(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_add(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_add(value)) }
+                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_add(value)) }
+                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_add(value)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_add(value)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_add(value)) }
                 }
             }
 
             Operation::Subtract => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_subtract(value)) }
-                    CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_subtract(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_subtract(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_subtract(value)) }
+                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_subtract(value)) }
+                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_subtract(value)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_subtract(value)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_subtract(value)) }
                 }
             }
 
             Operation::Multiply => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_multiply(value)) }
-                    CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_multiply(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_multiply(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_multiply(value)) }
+                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_multiply(value)) }
+                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_multiply(value)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_multiply(value)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_multiply(value)) }
                 }
             }
 
             Operation::Divide => {
                 panic_if_zero(self.marker_name(marker), "dividing", value);
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_divide(value)) }
-                    CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_divide(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_divide(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_divide(value)) }
+                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_divide(value)) }
+                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_divide(value)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_divide(value)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_divide(value)) }
                 }
             }
 
             Operation::Power => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_anchor_with_clamp(self.anchor.sat_power(value)) }
-                    CountMarker::Value         => { self.set_value_with_clamp(self.value.sat_power(value)) }
-                    CountMarker::LowerBound    => { self.set_lower_bound_with_clamp(self.lower_bound.sat_power(value)) }
-                    CountMarker::UpperBound    => { self.set_upper_bound_with_clamp(self.upper_bound.sat_power(value)) }
+                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_power(value)) }
+                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_power(value)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_power(value)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_power(value)) }
                 }
             }
         }
@@ -1380,7 +1279,7 @@ impl<V: CountValue> Count<V> {
     /// MENTION THAT NONE WILL BE RETURNED IN THE CASE THAT START == END
     pub fn get_percentage(
         &self,
-        value_marker: CountMarker,
+        marker_to_evaluate: CountMarker,
         starting_marker: CountMarker,
         ending_marker: CountMarker,
     ) -> Option<f64> {
@@ -1388,7 +1287,7 @@ impl<V: CountValue> Count<V> {
         // Obtaining the values of the markers as f64 floats to ensure the returned percentage holds
         // the highest level of precision possible. A better alternative to this would be allowing
         // the specification of the precision, but I don't got time for that.
-        let value: f64 = self.marker_value(value_marker).as_f64();
+        let value: f64 = self.marker_value(marker_to_evaluate).as_f64();
         let start: f64 = self.marker_value(starting_marker).as_f64();
         let end: f64 = self.marker_value(ending_marker).as_f64();
 
@@ -1479,34 +1378,6 @@ impl<V: CountValue> Count<V> {
 
     ///
     #[inline]
-    pub fn marker_name(
-        &self,
-        marker: CountMarker
-    ) -> &str {
-        match marker {
-            CountMarker::Anchor        => { "ANCHOR" }
-            CountMarker::Value         => { "VALUE" }
-            CountMarker::LowerBound    => { "LOWER_BOUND" }
-            CountMarker::UpperBound    => { "UPPER_BOUND" }
-        }
-    }
-
-    ///
-    #[inline]
-    pub fn marker_value(
-        &self,
-        marker: CountMarker
-    ) -> V {
-        match marker {
-            CountMarker::Anchor        => { self.anchor }
-            CountMarker::Value         => { self.value }
-            CountMarker::LowerBound    => { self.lower_bound }
-            CountMarker::UpperBound    => { self.upper_bound }
-        }
-    }
-
-    ///
-    #[inline]
     pub fn are_markers_equal(
         &self,
         marker_1: CountMarker,
@@ -1558,8 +1429,35 @@ impl<V: CountValue> Count<V> {
             (false, false) => {}
         }
     }
-}
 
+    ///
+    #[inline]
+    fn marker_name(
+        &self,
+        marker: CountMarker
+    ) -> &str {
+        match marker {
+            CountMarker::Anchor        => { "ANCHOR" }
+            CountMarker::Value         => { "VALUE" }
+            CountMarker::LowerBound    => { "LOWER_BOUND" }
+            CountMarker::UpperBound    => { "UPPER_BOUND" }
+        }
+    }
+
+    ///
+    #[inline]
+    fn marker_value(
+        &self,
+        marker: CountMarker
+    ) -> V {
+        match marker {
+            CountMarker::Anchor        => { self.anchor }
+            CountMarker::Value         => { self.value }
+            CountMarker::LowerBound    => { self.lower_bound }
+            CountMarker::UpperBound    => { self.upper_bound }
+        }
+    }
+}
 
 
 // ##################################### PANIC FUNCTIONS ######################################## //
