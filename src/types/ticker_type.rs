@@ -53,28 +53,40 @@ Copy                    // TickerPrecision types are floats, which means they're
 + Sync                  // Needed for Bevy queries; also lets Tickers be shared safely across threads.
 + 'static               // Needed for Bevy queries; also enforces that TickerPrecision types own their data, with no borrowed lifetimes.
 {
-    /// Text
+    ///
     const MIN_POSITIVE: Self;
 
-    /// Text
+    ///
     const MAX: Self;
 
-    /// Text
-    fn clamp(self, min: Self, max: Self)    -> Self;
+    ///
+    fn is_nan(self) -> bool;
 
     /// Text
-    fn as_f64(self)                         -> f64;
+    fn clamp(self, min: Self, max: Self) -> Self;
+
+    ///
+    fn power_with_positive_clamp(self, value: Self) -> Self;
 
     /// Text
-    fn from_f64(value: f64)                 -> Self;
+    fn as_f64(self) -> f64;
+
+    /// Text
+    fn from_f64(value: f64) -> Self;
 }
 impl TickerPrecision for f16 {
-    const MIN_POSITIVE: Self = f16::MIN_POSITIVE;
+    const MIN_POSITIVE: Self = Self::MIN_POSITIVE;
 
-    const MAX: Self = f16::MAX;
+    const MAX: Self = Self::MAX;
+
+    fn is_nan(self) -> bool
+    { self.is_nan() }
 
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
+
+    fn power_with_positive_clamp(self, value: Self) -> Self
+    { f16::from_f32(self.to_f32().powf(value.to_f32())).clamp(Self::MIN_POSITIVE, Self::MAX) }
 
     fn as_f64(self) -> f64
     { self.to_f64() }
@@ -83,12 +95,18 @@ impl TickerPrecision for f16 {
     { f16::from_f64(value) }
 }
 impl TickerPrecision for f32 {
-    const MIN_POSITIVE: Self = f32::MIN_POSITIVE;
+    const MIN_POSITIVE: Self = Self::MIN_POSITIVE;
 
-    const MAX: Self = f32::MAX;
+    const MAX: Self = Self::MAX;
+
+    fn is_nan(self) -> bool
+    { self.is_nan() }
 
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
+
+    fn power_with_positive_clamp(self, value: Self) -> Self
+    { self.powf(value).clamp(Self::MIN_POSITIVE, Self::MAX) }
 
     fn as_f64(self) -> f64
     { self as f64 }
@@ -97,12 +115,18 @@ impl TickerPrecision for f32 {
     { value as f32 }
 }
 impl TickerPrecision for f64 {
-    const MIN_POSITIVE: Self = f64::MIN_POSITIVE;
+    const MIN_POSITIVE: Self = Self::MIN_POSITIVE;
 
-    const MAX: Self = f64::MAX;
+    const MAX: Self = Self::MAX;
+
+    fn is_nan(self) -> bool
+    { self.is_nan() }
 
     fn clamp(self, min: Self, max: Self) -> Self
     { self.clamp(min, max) }
+
+    fn power_with_positive_clamp(self, value: Self) -> Self
+    { self.powf(value).clamp(Self::MIN_POSITIVE, Self::MAX) }
 
     fn as_f64(self) -> f64
     { self }
@@ -113,7 +137,7 @@ impl TickerPrecision for f64 {
 
 
 
-// ################################## TickerBehaviors ENUM ###################################### //
+// ################################### TickerBehavior ENUM ###################################### //
 /// Defines the set of possible behaviors a Ticker can be assigned, controlling both whether the
 /// ticker is mutable and what happens to current_value once it reaches a boundary.
 ///
@@ -141,7 +165,7 @@ impl TickerPrecision for f64 {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ticker_serialize", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "ticker_reflect", derive(Reflect), reflect(Clone, PartialEq))]
-pub enum TickerBehaviors {
+pub enum TickerBehavior {
     Looper,
     MutLooper,
     Oneshot,
@@ -305,7 +329,7 @@ pub struct Ticker<V: CountValue, P: TickerPrecision> {
     is_paused:                  bool,
     is_ticking_up:              bool,
     is_handling_time_spikes:    bool,
-    behavior:                   TickerBehaviors,
+    behavior:                   TickerBehavior,
 }
 impl<V: CountValue, P: TickerPrecision> Default for Ticker<V, P> {
 
@@ -330,7 +354,7 @@ impl<V: CountValue, P: TickerPrecision> Default for Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              true,
             is_handling_time_spikes:    true,
-            behavior:                   TickerBehaviors::MutLooper,
+            behavior:                   TickerBehavior::MutLooper,
         }
     }
 }
@@ -341,10 +365,10 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
-    /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehaviors::MutLooper);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
+    /// let ticker = Ticker::<i32, f32>::new(0, 10, 100, 1.0, false, true, true, TickerBehavior::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
     /// ```
     pub fn new(
         count:                      Count<V>,
@@ -352,8 +376,12 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         is_paused:                  bool,
         is_ticking_up:              bool,
         is_handling_time_spikes:    bool,
-        behavior:                   TickerBehaviors,
+        behavior:                   TickerBehavior,
     ) -> Self {
+
+        // PANIC EVALUATION
+        panic_if_time_interval_is_invalid("Ticker::new", time_interval);
+
         Self {
             count,
             time_interval,
@@ -372,11 +400,11 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
     /// let ticker = Ticker::<i32, f32>::new_looper(0, 100, 1.0, true);
     /// assert!(ticker.is_ticking_up());
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Looper);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::Looper);
     /// ```
     pub fn new_looper(
         starting_value:             V,
@@ -385,6 +413,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         is_handling_time_spikes:    bool,
         is_runtime_mutable:         bool,
     ) -> Self {
+
+        // PANIC EVALUATION
+        panic_if_time_interval_is_invalid("Ticker::new_looper", time_interval);
 
         // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
@@ -413,7 +444,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
-            behavior:                   if is_runtime_mutable { TickerBehaviors::MutLooper } else { TickerBehaviors::Looper },
+            behavior:                   if is_runtime_mutable { TickerBehavior::MutLooper } else { TickerBehavior::Looper },
         }
     }
 
@@ -424,10 +455,10 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
     /// let ticker = Ticker::<i32, f32>::new_oneshot(0, 10, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::Oneshot);
     /// ```
     pub fn new_oneshot(
         starting_value:             V,
@@ -436,6 +467,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         is_handling_time_spikes:    bool,
         is_runtime_mutable:         bool,
     ) -> Self {
+
+        // PANIC EVALUATION
+        panic_if_time_interval_is_invalid("Ticker::new_oneshot", time_interval);
 
         // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
@@ -464,7 +498,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
-            behavior:                   if is_runtime_mutable { TickerBehaviors::MutOneshot } else { TickerBehaviors::Oneshot },
+            behavior:                   if is_runtime_mutable { TickerBehavior::MutOneshot } else { TickerBehavior::Oneshot },
         }
     }
 
@@ -475,10 +509,10 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
     /// let ticker = Ticker::<i32, f32>::new_freezing(0, 100, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Freezing);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::Freezing);
     /// ```
     pub fn new_freezing(
         starting_value:             V,
@@ -486,6 +520,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         time_interval:              P,
         is_handling_time_spikes:    bool,
     ) -> Self {
+
+        // PANIC EVALUATION
+        panic_if_time_interval_is_invalid("Ticker::new_freezing", time_interval);
 
         // Determining bound locations since the ending_value could be below or above starting_value.
         // Lower bound must always be the lesser number, upper bound must always be the greater number.
@@ -514,7 +551,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             is_paused:                  false,
             is_ticking_up:              starting_value <= ending_value,
             is_handling_time_spikes,
-            behavior:                   TickerBehaviors::Freezing,
+            behavior:                   TickerBehavior::Freezing,
         }
     }
 
@@ -657,17 +694,17 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         self.is_handling_time_spikes
     }
 
-    /// Returns the TickerBehaviors type of the ticker.
+    /// Returns the TickerBehavior type of the ticker.
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
     /// let ticker = Ticker::<i32, f32>::new_mut_looper(0, 10, 1.0, true);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::MutLooper);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::MutLooper);
     /// ```
     #[inline]
-    pub fn behavior(&self) -> TickerBehaviors {
+    pub fn behavior(&self) -> TickerBehavior {
         self.behavior
     }
     // ######################################################################################## //
@@ -703,7 +740,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             &mut self.count
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("Count", "set_count()");
         }
     }
 
@@ -712,11 +749,15 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// CREATE ERROR FOR SUCH A THING!  CLAMP IS BAD!
     #[inline]
     pub fn set_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_time_interval_is_invalid("set_time_interval()", value);
+
         if self.is_runtime_mutable() {
             self.time_interval = value.clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "set_time_interval()");
         }
     }
 
@@ -736,7 +777,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_paused = true;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_paused boolean", "pause()");
         }
     }
 
@@ -757,7 +798,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_paused = false;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_paused boolean", "unpause()");
         }
     }
 
@@ -778,7 +819,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_ticking_up = true;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_ticking_up boolean", "tick_up()");
         }
     }
 
@@ -799,7 +840,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_ticking_up = false;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_ticking_up boolean", "tick_down()");
         }
     }
 
@@ -822,7 +863,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_handling_time_spikes = true;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_handling_time_spikes boolean", "start_handling_time_spikes()");
         }
     }
 
@@ -844,24 +885,24 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.is_handling_time_spikes = false;
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("is_handling_time_spikes boolean", "stop_handling_time_spikes()");
         }
     }
 
-    /// Switches the behavior of a ticker to the passed TickerBehaviors type.
+    /// Switches the behavior of a ticker to the passed TickerBehavior type.
     ///
     /// #### Does This Work For Tickers That Are Runtime Immutable?
     /// Yes.
     ///
     /// #### Example
     /// ```
-    /// use mirth_engine_counters::{Ticker, TickerBehaviors};
+    /// use mirth_engine_counters::{Ticker, TickerBehavior};
     ///
     /// let mut ticker = Ticker::<i32, f32>::new_mut_looper_custom(0, 0, 10, 1.0, true, true);
-    /// ticker.set_behavior(TickerBehaviors::Oneshot);
-    /// assert_eq!(ticker.behavior(), TickerBehaviors::Oneshot);
+    /// ticker.set_behavior(TickerBehavior::Oneshot);
+    /// assert_eq!(ticker.behavior(), TickerBehavior::Oneshot);
     #[inline]
-    pub fn set_behavior(&mut self, new_behavior: TickerBehaviors) {
+    pub fn set_behavior(&mut self, new_behavior: TickerBehavior) {
         self.behavior = new_behavior;
     }
     // ######################################################################################## //
@@ -873,55 +914,76 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// Adds to the `time_interval` of the ticker by the passed value.  Can take in negatives for subtraction.
     #[inline]
     pub fn add_to_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "adding", value);
+
         if self.is_runtime_mutable() {
             self.time_interval = (self.time_interval + value).clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "add_to_time_interval()");
         }
     }
 
     /// Text
     #[inline]
     pub fn subtract_from_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "subtracting", value);
+
         if self.is_runtime_mutable() {
             self.time_interval = (self.time_interval - value).clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "subtract_from_time_interval()");
         }
     }
 
     /// Text
     #[inline]
     pub fn multiply_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "multiplying", value);
+
         if self.is_runtime_mutable() {
             self.time_interval = (self.time_interval * value).clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "multiply_time_interval()");
         }
     }
 
     /// MUST ADD AVOIDER FOR DIVIDE BY 0
     #[inline]
     pub fn divide_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "dividing", value);
+        panic_if_zero("time_interval", "dividing", value);
+
         if self.is_runtime_mutable() {
             self.time_interval = (self.time_interval / value).clamp(P::MIN_POSITIVE, P::MAX);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "divide_time_interval()");
         }
     }
 
     ///
     #[inline]
     pub fn power_time_interval(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "exponentiating", value);
+
         if self.is_runtime_mutable() {
-            self.time_interval = self.time_interval.powf(value).clamp(P::MIN_POSITIVE, P::MAX);
+            self.time_interval = self.time_interval.power_with_positive_clamp(value);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("time_interval", "power_time_interval()");
         }
     }
     // ########################################################################################## //
@@ -937,7 +999,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.set_count().set_value_with_clamp(anchor_value);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("Count's value", "soft_reset()");
         }
     }
 
@@ -950,7 +1012,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             self.stored_time = P::from_f64(0.0);
         }
         else {
-            panic_and_print_mutability_message();
+            panic_and_print_mutability_message("stored_time and Count's value", "hard_reset()");
         }
     }
     // ########################################################################################## //
@@ -1026,7 +1088,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     /// 5. .tick() will truncate 4.705882353 to 4 and the 0.705882353 will act as a remainder.
     /// 6. The remainder of 0.705882353 gets assigned to stored_time so that the next .tick() call can account for how many clowns were carried over from the last blink period.
     /// 7. The 4 is what gets added or subtracted from current_value depending on if is_ticking_up is set to true or false.
-    /// 8. Voila. .tick() call is complete.
+    /// 8. Voilà. .tick() call is complete.
     pub fn tick(&mut self, elapsed_time_between_events: P) {
 
         // POTENTIAL RETURN
@@ -1111,8 +1173,8 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
                     // LOOPER LOGIC
                     // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
-                    TickerBehaviors::Looper |
-                    TickerBehaviors::MutLooper => {
+                    TickerBehavior::Looper |
+                    TickerBehavior::MutLooper => {
                         let anchor_value: V = self.count().anchor();
                         self.set_count().set_value_with_clamp(anchor_value);
                     },
@@ -1121,9 +1183,9 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
                     // stored_time will be zeroed out if value hits an active bound.  We
                     // do this wipe for stored_time since oneshotters and freezings are purposed to clear their
                     // time storage upon hitting an active boundary.
-                    TickerBehaviors::Oneshot |
-                    TickerBehaviors::MutOneshot |
-                    TickerBehaviors::Freezing => {
+                    TickerBehavior::Oneshot |
+                    TickerBehavior::MutOneshot |
+                    TickerBehavior::Freezing => {
                         self.stored_time = P::from_f64(0.0);
                     },
                 };
@@ -1152,11 +1214,11 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     #[inline]
     pub fn is_runtime_mutable(&self) -> bool {
         match self.behavior {
-            TickerBehaviors::Looper     => false,
-            TickerBehaviors::MutLooper  => true,
-            TickerBehaviors::Oneshot    => false,
-            TickerBehaviors::MutOneshot => true,
-            TickerBehaviors::Freezing   => self.count().is_at_a_limit(CountMarker::Value),
+            TickerBehavior::Looper     => false,
+            TickerBehavior::MutLooper  => true,
+            TickerBehavior::Oneshot    => false,
+            TickerBehavior::MutOneshot => true,
+            TickerBehavior::Freezing   => !self.count().is_at_a_limit(CountMarker::Value),
         }
     }
 
@@ -1176,14 +1238,53 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
 
 // ##################################### PANIC FUNCTIONS ######################################## //
+
+#[inline]
+fn panic_if_zero<P: TickerPrecision>(name_of_value: &str, name_of_action: &str, value: P) {
+    if value == P::from_f64(0.0) {
+        panic!(
+            "{}[TICKER PANIC]{} You are {name_of_action} a ticker's {name_of_value} with 0.  This will produce NaN.
+            NaN is not a valid CountValue for any comparison, bound, or arithmetic operation.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
+///
+#[inline]
+fn panic_if_is_nan<P: TickerPrecision>(name_of_value: &str, name_of_action: &str, value: P) {
+    if value.is_nan() {
+        panic!(
+            "{}[TICKER PANIC]{} You are {name_of_action} a ticker's {name_of_value} with NaN.
+            NaN is not a valid TickerPrecision for any comparison, bound, or arithmetic operation.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
+///
+#[inline]
+fn panic_if_time_interval_is_invalid<P: TickerPrecision>(name_of_action: &str, value: P) {
+    if value.is_nan() {
+        panic!(
+            "{}[TICKER PANIC]{} You are making a ticker's time_interval NaN with {name_of_action}.
+            NaN is not a valid TickerPrecision for any comparison, bound, or arithmetic operation.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+    else if value <= P::from_f64(0.0) {
+        panic!(
+            "{}[TICKER PANIC]{} You are making a ticker's time_interval be less than or equal to 0.0 with {name_of_action}.
+            A value that is less than or equal to 0.0 for time_interval is NOT acceptable since it messes up the .tick() method.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
 /// Used to cause a `PANIC` when something attempts to mutate an immutable ticker.
-/// The printed message will explain the ways to avoid the `PANIC`.
-fn panic_and_print_mutability_message() -> ! {
+fn panic_and_print_mutability_message(name_of_value: &str, name_of_action: &str,) -> ! {
     panic!(
-        "{}[TICKER PANIC]{} You are attempting to mutate an immutable Ticker.  You can avoid this panic in 3 different ways:
-        1. Change the behavior of the ticker to be mutable through constructing a copy using the new_copy_with_behavior_change constructor, and then replace the immutable version with the mutable copy.
-        2. Instantiate the ticker with a mutable behavior, not an immutable one.
-        3. Do a mutation state check using .is_runtime_mutable() on a ticker before attempting to mutate it.",
+        "{}[TICKER PANIC]{} You are attempting to mutate the {name_of_value} through {name_of_action} in a runtime immutable ticker.",
         "\x1b[31m", "\x1b[0m",
     )
 }
