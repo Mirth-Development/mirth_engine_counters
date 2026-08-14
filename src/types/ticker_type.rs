@@ -1108,8 +1108,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
                     // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
                     TickerBehavior::Looper |
                     TickerBehavior::MutLooper => {
-                        let anchor_value: V = self.count.anchor();
-                        self.count.set_marker_with_limits(CountMarker::Value, anchor_value);
+                        self.count.set_marker_with_limits(CountMarker::Value, self.count.anchor());
                     },
 
                     // ONESHOT + FREEZING LOGIC
