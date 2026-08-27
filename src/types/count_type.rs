@@ -695,6 +695,8 @@ impl CountValue for f32 {
     { value as f32 }
 }
 
+
+
 // ###################################### CountMarker ENUM ###################################### //
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -707,6 +709,8 @@ pub enum CountMarker {
     UpperBound,
 }
 
+
+
 // ####################################### CountBound ENUM ###################################### //
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -717,38 +721,62 @@ pub enum CountBound {
     Upper,
 }
 
+
+
 // ######################################## CountError ENUM ##################################### //
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CountError<V: CountValue> {
+    ExceedsLowerBound{
+        value: V,
+        bound_value: V,
+        name_of_value: &'static str,
+    },
+    ExceedsUpperBound{
+        value: V,
+        bound_value: V,
+        name_of_value: &'static str,
+    },
     ExceedsLowerLimit{
         value: V,
-        limit: V,
+        limit_value: V,
         name_of_value: &'static str,
     },
     ExceedsUpperLimit{
         value: V,
-        limit: V,
+        limit_value: V,
         name_of_value: &'static str,
     }
 }
 impl<V: CountValue> Display for CountError<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CountError::ExceedsLowerLimit { value, limit, name_of_value } => {
+            CountError::ExceedsLowerBound { value, bound_value, name_of_value } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below its current lower limit of {limit}.  Here are some notes about this error:
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below its current lower_bound of {bound_value}.  Here are some notes about this error:
                        1. When changing the upper_bound of a Count, you can not go below the lower_bound even if the lower_bound is inactive.
-                       2. When changing the anchor or value of a Count, you can not go below the lower_bound when it's active.  But you are able to when it's inactive.
-                       3. When changing the anchor or value of a Count, you can not go below its CountValue's MIN.",
+                       2. When changing the anchor or value of a Count, you can not go below the lower_bound when it's active.  But you are able to when it's inactive.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
-            CountError::ExceedsUpperLimit { value, limit, name_of_value } => {
+            CountError::ExceedsUpperBound { value, bound_value, name_of_value } => {
                 write!(f,
-                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above its current upper limit of {limit}.  Here are some notes about this error:
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above its current upper_bound of {bound_value}.  Here are some notes about this error:
                        1. When changing the lower_bound of a Count, you can not go above the upper_bound even if the upper_bound is inactive.
-                       2. When changing the anchor or value of a Count, you can not go above the upper_bound when it's active.  But you are able to when it's inactive.
-                       3. When changing the anchor or value of a Count, you can not go above its CountValue's MAX.",
+                       2. When changing the anchor or value of a Count, you can not go above the upper_bound when it's active.  But you are able to when it's inactive.",
+                       "\x1b[31m", "\x1b[0m"
+                )
+            },
+            CountError::ExceedsLowerLimit { value, limit_value, name_of_value } => {
+                write!(f,
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is below its type's lower limit of {limit_value}.  Here are some notes about this error:
+                       1. When changing the value of a Count marker, you can not go below the marker type's CountValue::MIN of {limit_value}.",
+                       "\x1b[31m", "\x1b[0m"
+                )
+            },
+            CountError::ExceedsUpperLimit { value, limit_value, name_of_value } => {
+                write!(f,
+                       "{}[COUNT ERROR]{} A Count's {name_of_value} can not be set to {value} as that is above its type's upper limit of {limit_value}.  Here are some notes about this error:
+                       1. When changing the value of a Count marker, you can not go above the marker type's CountValue::MAX of {limit_value}.",
                        "\x1b[31m", "\x1b[0m"
                 )
             },
@@ -776,7 +804,12 @@ pub struct Count<V: CountValue> {
 }
 impl<V: CountValue> Default for Count<V> {
 
-    ///
+    /// Constructs a Count with the following properties:
+    /// - anchor is set to 0.
+    /// - value is set to 0.
+    /// - lower_bound is set to the Count type's lower limit (CountValue::MIN).
+    /// - upper_bound is set to the Count type's upper limit (CountValue::MAX).
+    /// - Bounds are active.
     fn default() -> Self {
         Self {
             anchor:                 V::from_i64(0),
@@ -791,7 +824,7 @@ impl<V: CountValue> Default for Count<V> {
 impl<V: CountValue> Count<V> {
 
     // ##################################### CONSTRUCTORS ######################################## //
-    /// PANIC EVALUATION ACCOUNTS FOR WHICH BOUNDARIES ARE ACTIVE
+    /// Constructs a custom Count.
     pub fn new(
         anchor:                 V,
         value:                  V,
@@ -821,7 +854,7 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// PANIC EVALUATION ACCOUNTS FOR WHICH BOUNDARIES ARE ACTIVE
+    /// Constructs a Count with is_lower_bound_active and is_upper_bound_active set to true.
     pub fn new_with_active_bounds(
         anchor:         V,
         value:          V,
@@ -849,7 +882,7 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// PANIC EVALUATION ACCOUNTS FOR WHICH BOUNDARIES ARE ACTIVE
+    /// Constructs a Count with is_lower_bound_active and is_upper_bound_active set to false.
     pub fn new_with_inactive_bounds(
         anchor:         V,
         value:          V,
@@ -920,16 +953,21 @@ impl<V: CountValue> Count<V> {
 
     // ###################################### SETTERS ########################################### //
     /// Sets a specified marker to the given number. Setting a bound marker that is active will clamp
-    /// anchor and value to the new boundary range. Will return a CountError if either the lower or
-    /// upper limit is exceeded for the specified marker.
+    /// anchor and value to the new boundary range. Will return a Result, more specifically it will
+    /// return a CountError.  Here are the following return scenarios:
+    /// - **CountError::ExceedsLowerBound**: Passed number for anchor or value marker exceeds the active lower_bound, or the upper_bound marker is being set below the lower_bound.
+    /// - **CountError::ExceedsUpperBound**: Passed number for anchor or value marker exceeds the active upper_bound, or the lower_bound marker is being set above the upper_bound.
+    /// - **CountError::ExceedsLowerLimit**: Passed number for any marker is being set below the Count type's lower limit (CountValue::MIN).
+    /// - **CountError::ExceedsUpperLimit**: Passed number for any marker is being set above the Count type's upper limit (CountValue::MAX).
+    /// - **()**: No error found.
     ///
     /// ### Panic Warning
-    /// Will panic if NaN is passed in for value.
+    /// Will panic if NaN is passed in for `number`.
     ///
     /// ### Why Does This Exist?
-    /// Allows for the control of what happens when exceeding a limit, rather than auto-clamping like
-    /// .set_marker_with_limits().  Use .set_marker() when you need to specify a unique event when
-    /// overflow or underflow would occur.
+    /// Allows for the control of what happens when exceeding a bound or limit, rather than auto-clamping like
+    /// .set_marker_with_clamp().  Use .set_marker() when you need to specify a unique event when
+    /// overflow would occur or when an active boundary has been exceeded.
     pub fn set_marker(
         &mut self,
         marker: CountMarker,
@@ -942,31 +980,31 @@ impl<V: CountValue> Count<V> {
         match marker {
 
             CountMarker::Anchor => {
-                if      (number < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerLimit{ value: number, limit: self.lower_bound, name_of_value: "anchor" }); }
-                else if (number > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperLimit{ value: number, limit: self.upper_bound, name_of_value: "anchor" }); }
-                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit{ value: number, limit: V::MIN, name_of_value: "anchor" }); }
-                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit{ value: number, limit: V::MAX, name_of_value: "anchor" }); }
+                if      (number < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerBound{ value: number, bound_value: self.lower_bound, name_of_value: "anchor" }); }
+                else if (number > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperBound{ value: number, bound_value: self.upper_bound, name_of_value: "anchor" }); }
+                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit{ value: number, limit_value: V::MIN, name_of_value: "anchor" }); }
+                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit{ value: number, limit_value: V::MAX, name_of_value: "anchor" }); }
                 self.anchor = number;
             }
 
             CountMarker::Value => {
-                if      (number < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerLimit{ value: number, limit: self.lower_bound, name_of_value: "number" }); }
-                else if (number > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperLimit{ value: number, limit: self.upper_bound, name_of_value: "number" }); }
-                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit { value: number, limit: V::MIN, name_of_value: "number" }); }
-                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit { value: number, limit: V::MAX, name_of_value: "number" }); }
+                if      (number < self.lower_bound) && self.is_lower_bound_active { return Err(CountError::<V>::ExceedsLowerBound{ value: number, bound_value: self.lower_bound, name_of_value: "value" }); }
+                else if (number > self.upper_bound) && self.is_upper_bound_active { return Err(CountError::<V>::ExceedsUpperBound{ value: number, bound_value: self.upper_bound, name_of_value: "value" }); }
+                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit { value: number, limit_value: V::MIN, name_of_value: "value" }); }
+                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit { value: number, limit_value: V::MAX, name_of_value: "value" }); }
                 self.value = number;
             }
 
             CountMarker::LowerBound => {
-                if      number > self.upper_bound { return Err(CountError::<V>::ExceedsUpperLimit { value: number, limit: self.upper_bound, name_of_value: "lower_bound" }); }
-                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit { value: number, limit: V::MIN, name_of_value: "lower_bound" }); }
+                if      number > self.upper_bound { return Err(CountError::<V>::ExceedsUpperBound { value: number, bound_value: self.upper_bound, name_of_value: "lower_bound" }); }
+                else if number < V::MIN { return Err(CountError::<V>::ExceedsLowerLimit { value: number, limit_value: V::MIN, name_of_value: "lower_bound" }); }
                 self.lower_bound = number;
                 self.enforce_bounds();
             }
 
             CountMarker::UpperBound => {
-                if      number < self.lower_bound { return Err(CountError::<V>::ExceedsLowerLimit { value: number, limit: self.lower_bound, name_of_value: "upper_bound" }); }
-                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit { value: number, limit: V::MAX, name_of_value: "upper_bound" }); }
+                if      number < self.lower_bound { return Err(CountError::<V>::ExceedsLowerBound { value: number, bound_value: self.lower_bound, name_of_value: "upper_bound" }); }
+                else if number > V::MAX { return Err(CountError::<V>::ExceedsUpperLimit { value: number, limit_value: V::MAX, name_of_value: "upper_bound" }); }
                 self.upper_bound = number;
                 self.enforce_bounds();
             }
@@ -975,17 +1013,18 @@ impl<V: CountValue> Count<V> {
         Ok(())
     }
 
-    /// Sets a specified marker to the given number, the number is clamped to the marker's limits.
-    /// Setting a bound marker that is active will clamp anchor and value to the new boundary range.
+    /// Sets a specified marker to the given number, the number is clamped to the marker's limits/boundaries;
+    /// clamp range is based on which bounds are set to be active. Additionally, setting a bound marker
+    /// that is active will clamp anchor and value to the new boundary range.
     ///
     /// ### Panic Warning
-    /// Will panic if NaN is passed in for value.
+    /// Will panic if NaN is passed in for `number`.
     ///
     /// ### Why Does This Exist?
-    /// To ease clamping markers to their limits.  This method doesn't require error handling like
+    /// To ease clamping markers to their current walls.  This method doesn't require error handling like
     /// .set_marker() does, so it makes working on markers that are purposed to not have unique events
-    /// on overflow/underflow easier; keeps things within their intended boundaries without handling.
-    pub fn set_marker_with_limits(
+    /// on overflow/underflow easier; keeps things within their intended boundaries/limits without handling.
+    pub fn set_marker_with_clamp(
         &mut self,
         marker: CountMarker,
         number: V,
@@ -997,15 +1036,15 @@ impl<V: CountValue> Count<V> {
         match marker {
 
             CountMarker::Anchor => {
-                let lower_limit = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-                let upper_limit = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-                self.anchor = number.count_clamp(lower_limit, upper_limit);
+                let lower_wall = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+                let upper_wall = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+                self.anchor = number.count_clamp(lower_wall, upper_wall);
             }
 
             CountMarker::Value => {
-                let lower_limit = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
-                let upper_limit = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
-                self.value = number.count_clamp(lower_limit, upper_limit);
+                let lower_wall = if self.is_lower_bound_active { self.lower_bound } else { V::MIN };
+                let upper_wall = if self.is_upper_bound_active { self.upper_bound } else { V::MAX };
+                self.value = number.count_clamp(lower_wall, upper_wall);
             }
 
             CountMarker::LowerBound => {
@@ -1023,7 +1062,7 @@ impl<V: CountValue> Count<V> {
     /// Turns on a specified CountBound.
     ///
     /// Turning on a bound will clamp the anchor and value markers to the updated boundary range,
-    /// and this will prevent them from exceeding the specified CountBound.
+    /// and this will prevent them from exceeding the specified CountBound until the bound is deactivated.
     #[inline]
     pub fn activate_bound(&mut self, bound: CountBound) {
         match bound {
@@ -1045,19 +1084,25 @@ impl<V: CountValue> Count<V> {
     }
 
 
+
     // ################################### MARKER METHODS ##################################### //
     /// Grants the ability to apply a specified Operation onto the provided CountMarker by the number
     /// that is passed in.  Will return a CountError if the operation ends up pushing a marker past
-    /// its lower or upper limit.
+    /// a limit or active boundary.  Here are the following return scenarios:
+    /// - **CountError::ExceedsLowerBound**: Operation on anchor or value marker caused for exceeding the active lower_bound, or the upper_bound marker is being operated to be below the lower_bound.
+    /// - **CountError::ExceedsUpperBound**: Operation on anchor or value marker caused for exceeding the active upper_bound, or the lower_bound marker is being operated to be above the upper_bound.
+    /// - **CountError::ExceedsLowerLimit**: Operation is setting a marker to be below the Count type's lower limit (CountValue::MIN).
+    /// - **CountError::ExceedsUpperLimit**: Operation is setting a marker to be above the Count type's upper limit (CountValue::MAX).
+    /// - **()**: No error found.
     ///
     /// ### Panic Warnings
-    /// - Will panic if NaN is passed in for value.
+    /// - Will panic if NaN is passed in for `number`.
     /// - Will panic if you choose to divide by 0.
     ///
     /// ### Why Does This Exist?
     /// To allow operations on a marker and to grant you the ability to define what happens when an
     /// operation causes a marker to exceed one of its limits.  If you'd like to just clamp to a limit
-    /// when it has been exceeded, use .operate_with_limits().
+    /// or active boundary when it has been exceeded, use .operate_with_clamp().
     #[inline]
     pub fn operate(
         &mut self,
@@ -1123,15 +1168,15 @@ impl<V: CountValue> Count<V> {
     /// that is passed in.  The operation does not have the ability to exceed a marker's limits.
     ///
     /// ### Panic Warnings
-    /// - Will panic if NaN is passed in for value.
+    /// - Will panic if NaN is passed in for `number`.
     /// - Will panic if you choose to divide by 0.
     ///
     /// ### Why Does This Exist?
     /// To allow operations on a marker without having to worry about the operation pushing a marker
-    /// past its limits.  This method uses the logic from .set_marker_with_limits(), so when operating
+    /// past its limits.  This method uses the logic from .set_marker_with_clamp(), so when operating
     /// on a bound marker that is active it will clamp anchor and value to the new boundary range.
     #[inline]
-    pub fn operate_with_limits(
+    pub fn operate_with_clamp(
         &mut self,
         operation: Operation,
         marker: CountMarker,
@@ -1145,53 +1190,77 @@ impl<V: CountValue> Count<V> {
 
             Operation::Add => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_add(number)) }
-                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_add(number)) }
-                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_add(number)) }
-                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_add(number)) }
+                    CountMarker::Anchor        => { self.set_marker_with_clamp(CountMarker::Anchor, self.anchor.sat_add(number)) }
+                    CountMarker::Value         => { self.set_marker_with_clamp(CountMarker::Value, self.value.sat_add(number)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_clamp(CountMarker::LowerBound, self.lower_bound.sat_add(number)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_clamp(CountMarker::UpperBound, self.upper_bound.sat_add(number)) }
                 }
             }
 
             Operation::Subtract => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_subtract(number)) }
-                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_subtract(number)) }
-                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_subtract(number)) }
-                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_subtract(number)) }
+                    CountMarker::Anchor        => { self.set_marker_with_clamp(CountMarker::Anchor, self.anchor.sat_subtract(number)) }
+                    CountMarker::Value         => { self.set_marker_with_clamp(CountMarker::Value, self.value.sat_subtract(number)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_clamp(CountMarker::LowerBound, self.lower_bound.sat_subtract(number)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_clamp(CountMarker::UpperBound, self.upper_bound.sat_subtract(number)) }
                 }
             }
 
             Operation::Multiply => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_multiply(number)) }
-                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_multiply(number)) }
-                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_multiply(number)) }
-                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_multiply(number)) }
+                    CountMarker::Anchor        => { self.set_marker_with_clamp(CountMarker::Anchor, self.anchor.sat_multiply(number)) }
+                    CountMarker::Value         => { self.set_marker_with_clamp(CountMarker::Value, self.value.sat_multiply(number)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_clamp(CountMarker::LowerBound, self.lower_bound.sat_multiply(number)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_clamp(CountMarker::UpperBound, self.upper_bound.sat_multiply(number)) }
                 }
             }
 
             Operation::Divide => {
                 panic_if_zero(self.marker_name(marker), "dividing", number);
                 match marker {
-                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_divide(number)) }
-                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_divide(number)) }
-                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_divide(number)) }
-                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_divide(number)) }
+                    CountMarker::Anchor        => { self.set_marker_with_clamp(CountMarker::Anchor, self.anchor.sat_divide(number)) }
+                    CountMarker::Value         => { self.set_marker_with_clamp(CountMarker::Value, self.value.sat_divide(number)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_clamp(CountMarker::LowerBound, self.lower_bound.sat_divide(number)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_clamp(CountMarker::UpperBound, self.upper_bound.sat_divide(number)) }
                 }
             }
 
             Operation::Power => {
                 match marker {
-                    CountMarker::Anchor        => { self.set_marker_with_limits(CountMarker::Anchor, self.anchor.sat_power(number)) }
-                    CountMarker::Value         => { self.set_marker_with_limits(CountMarker::Value, self.value.sat_power(number)) }
-                    CountMarker::LowerBound    => { self.set_marker_with_limits(CountMarker::LowerBound, self.lower_bound.sat_power(number)) }
-                    CountMarker::UpperBound    => { self.set_marker_with_limits(CountMarker::UpperBound, self.upper_bound.sat_power(number)) }
+                    CountMarker::Anchor        => { self.set_marker_with_clamp(CountMarker::Anchor, self.anchor.sat_power(number)) }
+                    CountMarker::Value         => { self.set_marker_with_clamp(CountMarker::Value, self.value.sat_power(number)) }
+                    CountMarker::LowerBound    => { self.set_marker_with_clamp(CountMarker::LowerBound, self.lower_bound.sat_power(number)) }
+                    CountMarker::UpperBound    => { self.set_marker_with_clamp(CountMarker::UpperBound, self.upper_bound.sat_power(number)) }
                 }
             }
         }
     }
 
+    /// Returns an `Option<i8>` for a requested whole digit; will return only positive numbers if a digit exists.
+    /// Here are some special return scenarios:
+    /// - None is returned if the requested place doesn't exist.
+    /// - None is returned if place exceeds CountValue::MAX_WHOLE_PLACES for the marker's type.
+    /// - None is returned if the requested place is 0.
     ///
+    /// ### What Are The MAX_WHOLE_PLACES For Each Type?
+    /// - `u8`: 3
+    /// - `u16`: 5
+    /// - `u32`: 10
+    /// - `i8`: 3
+    /// - `i16`: 5
+    /// - `i32`: 10
+    /// - `f16`: 5
+    /// - `f32`: 39
+    ///
+    /// ### Parameter Definitions
+    /// - `place` is the number of digits to the left of the floating point and is used to dictate which
+    /// whole number digit you want from a marker's value.  `place` is 1-indexed from the floating point
+    ///  (`1` = tens, `2` = hundreds, etc.).
+    /// - `marker` is used to dictate which field inside a Count you want to get the whole digit from.
+    ///
+    /// ### Why Return an i8 over u8?
+    /// I tend to work with things that involve negative values, and I'd like to not typecast
+    /// unsigned integers all the time.
     pub fn get_whole_digit(
         &self,
         place: u8,
@@ -1223,11 +1292,28 @@ impl<V: CountValue> Count<V> {
         }
     }
 
-    /// Retrieves a specific decimal digit from the fractional part of a marker's value, exactly
+    /// Returns a specific digit as an `Option<i8>` from the fractional part of a marker's value, exactly
     /// as it is stored in memory — without accounting for floating-point representation noise.
+    /// Here are some special return scenarios:
+    /// - None is returned if the requested place doesn't exist.
+    /// - None is returned if the requested place is 0.
+    /// - None is returned if place exceeds `CountValue::MAX_FLOATING_PLACES` for the marker's type.
+    /// - None is returned if the value is an integer type.
     ///
-    /// `place` is 1-indexed from the decimal point (`1` = tenths, `2` = hundredths, etc.).
-    /// Returns `None` if `place` is `0` or exceeds `V::MAX_FLOATING_PLACES` for this type.
+    /// ### What Are The MAX_FLOATING_PLACES For Each Type?
+    /// - `Unsigned or Signed Integers`: 0
+    /// - `f16`: 8
+    /// - `f32`: 45
+    ///
+    /// ### Parameter Definitions
+    /// - `place` is the number of digits to the right of the floating point and is used to dictate which
+    /// fractional digit you want from a marker's value.  `place` is 1-indexed from the floating point
+    /// (`1` = tenths, `2` = hundredths, etc.).
+    /// - `marker` is used to dictate which field inside a Count you want to get the floating digit from.
+    ///
+    /// ### Why Return an i8 over u8?
+    /// I tend to work with things that involve negative values, and I'd like to not typecast
+    /// unsigned integers all the time.
     pub fn get_floating_digit(
         &self,
         place: u8,
@@ -1247,7 +1333,10 @@ impl<V: CountValue> Count<V> {
             // Shift the fractional part left one decimal digit at a time, extracting the
             // integer part as the digit at that place and keeping only the remainder for
             // the next iteration. This keeps `working` bounded within [0, 10) at every
-            // step, regardless of how large `place` is, avoiding overflow.
+            // step, regardless of how large `place` is, avoiding overflow.  We're doing this because
+            // floats support values that go to ridiculous numbers like quadrillion, and I couldn't find
+            // a way to math out place acquisition cleanly without causing overflow on extremely high
+            // and low values--there is likely a better way.
             for _ in 0..place {
                 working = working * ten;
                 digit = working.truncate();
@@ -1261,7 +1350,28 @@ impl<V: CountValue> Count<V> {
         }
     }
 
+    /// Returns a specific digit as an `Option<i8>` from the fractional part of a marker's value, but
+    /// the returned value is adjusted to account for floating-point noise caused by boolean fractional logic.
+    /// Here are some special return scenarios:
+    /// - None is returned if the requested place doesn't exist.
+    /// - None is returned if the requested place is 0.
+    /// - None is returned if place exceeds CountValue::RELIABLE_FLOATING_PLACES for the marker's type.
+    /// - None is returned if the value is an integer type.
     ///
+    /// ### What Are The RELIABLE_FLOATING_PLACES For Each Type?
+    /// - `Unsigned or Signed Integers`: 0
+    /// - `f16`: 2
+    /// - `f32`: 5
+    ///
+    /// ### Parameter Definitions
+    /// - `place` is the number of digits to the right of the floating point and is used to dictate which
+    /// fractional digit you want from a marker's value.  `place` is 1-indexed from the floating point
+    /// (`1` = tenths, `2` = hundredths, etc.).
+    /// - `marker` is used to dictate which field inside a Count you want to get the floating digit from.
+    ///
+    /// ### Why Return an i8 over u8?
+    /// I tend to work with things that involve negative values, and I'd like to not typecast
+    /// unsigned integers all the time.
     pub fn get_floating_digit_with_epsilon(
         &self,
         place: u8,
@@ -1302,7 +1412,7 @@ impl<V: CountValue> Count<V> {
     /// Returns `to_marker`'s value minus `from_marker`'s value, preserving sign to indicate direction:
     /// - **Positive Result**: `to_marker` sits to the right of (greater than) `from_marker`.
     /// - **Negative Result**: `to_marker` sits to the left of (less than) `from_marker`.
-    /// - **Zero Result**: The two markers currently hold equal values.
+    /// - **Zero Result**: The two markers hold the same value.
     #[inline]
     pub fn get_signed_difference(
         &self,
@@ -1315,7 +1425,7 @@ impl<V: CountValue> Count<V> {
         )
     }
 
-    /// Returns the difference between the 2 passed markers -- result is always positive.
+    /// Returns the difference between the 2 passed markers, result is always positive.
     #[inline]
     pub fn get_absolute_difference(
         &self,
@@ -1328,8 +1438,26 @@ impl<V: CountValue> Count<V> {
         )
     }
 
-    /// REMEMBER TO MENTION THAT STARTING_MARKER AND ENDING_MARKER CAN BE FLIPPED TO OBTAIN THE INVERSE PERCENTAGE!
-    /// MENTION THAT NONE WILL BE RETURNED IN THE CASE THAT START == END
+    /// Returns the percentage of how far `marker_to_evaluate` is within the range of `starting_marker`
+    /// to `ending_marker` in the form of an `Option<f64>.  Here are the potential results explained:
+    /// - **1.0+ Result**: `marker_to_evaluate` exceeds the ending_marker's value.
+    /// - **1.0 Result**: `marker_to_evaluate` is equal to the ending_marker.
+    /// - **0.0 to 1.0 Result**: `marker_to_evaluate` is between the starting_marker and ending_marker.
+    /// - **0.0 Result**: `marker_to_evaluate` is equal to the starting_marker.
+    /// - **-0.0 Result**: `marker_to_evaluate` exceeds the starting_marker's value.
+    /// - **None Result**: `starting_marker` and `ending_marker` have the same value; None must be returned
+    /// in this context since the calculation requires division and these markers equaling one another
+    /// would create a division by zero error, hence we return None instead.
+    ///
+    /// ### Note on "Exceeds" In This Context
+    /// Because the `starting_marker` could be above or below the `ending_marker`, how the term "exceeds"
+    /// is defined is relative to the direction that the markers are working toward.  "exceed" could mean
+    /// that the `marker_to_evaluate` is either below or above the value of another marker; it all depends
+    /// on the direction that the start works toward the end.
+    ///
+    /// ### Can This Be Used to Get the Remaining Percentage?
+    /// Yes! If you want the flipped/inverse percentage (remaining percentage), then flip the markers you're
+    /// passing in for the `starting_marker` and `ending_marker`.
     pub fn get_percentage(
         &self,
         marker_to_evaluate: CountMarker,
@@ -1380,60 +1508,65 @@ impl<V: CountValue> Count<V> {
         V::from_f64(((end - start) * modified_percentage) + start)
     }
 
-    /// Returns true if the passed marker is at its lower limit, false otherwise.
+    /// Returns true if the passed marker is at the lower_bound, false otherwise.
+    #[inline]
+    pub fn is_at_lower_bound(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        value == self.lower_bound
+    }
+
+
+    /// Returns true if the passed marker is at the upper_bound, false otherwise.
+    #[inline]
+    pub fn is_at_upper_bound(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        value == self.upper_bound
+    }
+
+    /// Returns true if the passed marker is at either the lower_bound or upper_bound, false otherwise.
+    #[inline]
+    pub fn is_at_a_bound(
+        &self,
+        marker: CountMarker,
+    ) -> bool {
+        let value: V = self.marker_value(marker);
+        (value == self.lower_bound) || (value == self.upper_bound)
+    }
+
+    /// Returns true if the passed marker is at the Count's lower limit, false otherwise.
     #[inline]
     pub fn is_at_lower_limit(
         &self,
         marker: CountMarker,
     ) -> bool {
         let value: V = self.marker_value(marker);
-        match marker {
-            CountMarker::Anchor |
-            CountMarker::Value => {
-                ((value == self.lower_bound) && self.is_lower_bound_active) ||
-                (value == V::MIN)
-            },
-            CountMarker::LowerBound => value == V::MIN,
-            CountMarker::UpperBound => value == self.lower_bound,
-        }
+        value == V::MIN
     }
 
-    /// Returns true if the passed marker is at its upper limit, false otherwise.
+    /// Returns true if the passed marker is at the Count's upper limit, false otherwise.
     #[inline]
     pub fn is_at_upper_limit(
         &self,
         marker: CountMarker,
     ) -> bool {
         let value: V = self.marker_value(marker);
-        match marker {
-            CountMarker::Anchor |
-            CountMarker::Value => {
-                ((value == self.upper_bound) && self.is_upper_bound_active) ||
-                (value == V::MAX)
-            },
-            CountMarker::LowerBound => value == self.upper_bound,
-            CountMarker::UpperBound => value == V::MAX,
-        }
+        value == V::MAX
     }
 
-    /// Returns true if the passed marker is at either its lower or upper limit, false otherwise.
+    /// Returns true if the passed marker is at either the Count's lower or upper limit, false otherwise.
     #[inline]
     pub fn is_at_a_limit(
         &self,
         marker: CountMarker,
     ) -> bool {
         let value: V = self.marker_value(marker);
-        match marker {
-            CountMarker::Anchor |
-            CountMarker::Value => {
-                ((value == self.lower_bound) && self.is_lower_bound_active) ||
-                ((value == self.upper_bound) && self.is_upper_bound_active) ||
-                (value == V::MIN) ||
-                (value == V::MAX)
-            },
-            CountMarker::LowerBound => (value == V::MIN) || (value == self.upper_bound),
-            CountMarker::UpperBound => (value == self.lower_bound) || (value == V::MAX),
-        }
+        (value == V::MIN) || (value == V::MAX)
     }
 
     /// Returns true if the marker values are equal, false otherwise.
@@ -1446,9 +1579,10 @@ impl<V: CountValue> Count<V> {
         self.marker_value(marker_1) == self.marker_value(marker_2)
     }
 
+
+
     // #################################### HELPER METHODS ###################################### //
-    /// Will print out all the fields and values of a Count, plus the Count's value minimum
-    /// and maximum values for its markers.
+    /// Will print out all the field information of a Count, plus the Count type's data limits for its markers.
     #[inline]
     pub fn print_information(&self) {
         println!("ANCHOR : {}", self.anchor);
@@ -1457,12 +1591,12 @@ impl<V: CountValue> Count<V> {
         println!("UPPER_BOUND : {}", self.upper_bound);
         println!("IS_LOWER_BOUND_ACTIVE : {}", self.is_lower_bound_active);
         println!("IS_UPPER_BOUND_ACTIVE : {}", self.is_upper_bound_active);
-        println!("MINIMUM POTENTIAL VALUE FOR MARKERS : {}", V::MIN);
-        println!("MAXIMUM POTENTIAL VALUE FOR MARKERS: {}", V::MAX);
+        println!("LOWER LIMIT FOR MARKERS : {}", V::MIN);
+        println!("UPPER LIMIT FOR MARKERS: {}", V::MAX);
     }
 
     /// Sets anchor, value, or both fields to a boundary's number if the boundary is active and
-    /// anchor or value is outside the bound.  If a bound is inactive and anchor or value exceeds the
+    /// anchor or value is outside the bound.  If a bound is inactive, and anchor or value exceeds the
     /// bound's number, nothing will happen as anchor/value are allowed to exceed inactive bounds.
     fn enforce_bounds(&mut self) {
 
@@ -1523,32 +1657,41 @@ impl<V: CountValue> Count<V> {
 }
 
 
+
 // ##################################### PANIC FUNCTIONS ######################################## //
-///
+/// Causes a panic if the passed value is out of the given range.
 #[inline]
-fn panic_if_value_is_out_of_range<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V, minimum: V, maximum: V) {
-    assert!(
-        value >= minimum && value <= maximum,
-        "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with the value {value}.  {name_of_value} must be between {minimum} and {maximum} (inclusive).",
-        "\x1b[31m", "\x1b[0m",
-    );
+fn panic_if_value_is_out_of_range<V: CountValue>(
+    name_of_value: &str,
+    name_of_action: &str,
+    value: V,
+    minimum: V,
+    maximum: V
+) {
+    if (value < minimum) || (value > maximum) {
+        panic!(
+            "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with the value {value}.  {name_of_value} must be between {minimum} and {maximum} (inclusive).",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
 }
 
-///
+/// Causes a panic if one of the following is true:
+/// - The upper_bound's value is less than the lower_bound's value.
+/// - The lower_bound's value is greater than the upper_bound's value.
 #[inline]
-fn panic_if_lower_bound_is_greater_than_upper_bound<V: CountValue>(name_of_action: &str, lower_bound: V, upper_bound: V) {
+fn panic_if_bounds_are_incorrect<V: CountValue>(
+    name_of_action: &str,
+    lower_bound: V,
+    upper_bound: V
+) {
     if lower_bound > upper_bound {
         panic!(
             "{}[COUNT PANIC]{} You are {name_of_action} a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your lower_bound can not be greater than your upper_bound.",
             "\x1b[31m", "\x1b[0m",
         );
     }
-}
-
-///
-#[inline]
-fn panic_if_upper_bound_is_less_than_lower_bound<V: CountValue>(name_of_action: &str, lower_bound: V, upper_bound: V) {
-    if upper_bound < lower_bound {
+    else if upper_bound < lower_bound {
         panic!(
             "{}[COUNT PANIC]{} You are {name_of_action} a Count's lower_bound with the value {lower_bound}, and its upper_bound with the value {upper_bound}; your upper_bound can not be less than your lower_bound.",
             "\x1b[31m", "\x1b[0m",
@@ -1556,9 +1699,13 @@ fn panic_if_upper_bound_is_less_than_lower_bound<V: CountValue>(name_of_action: 
     }
 }
 
-///
+/// Causes a panic if the passed value is NaN.
 #[inline]
-fn panic_if_is_nan<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V) {
+fn panic_if_is_nan<V: CountValue>(
+    name_of_value: &str,
+    name_of_action: &str,
+    value: V
+) {
     if value.is_nan() {
         panic!(
             "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with NaN.
@@ -1568,9 +1715,13 @@ fn panic_if_is_nan<V: CountValue>(name_of_value: &str, name_of_action: &str, val
     }
 }
 
-///
+/// Causes a panic if the passed value is 0.
 #[inline]
-fn panic_if_zero<V: CountValue>(name_of_value: &str, name_of_action: &str, value: V) {
+fn panic_if_zero<V: CountValue>(
+    name_of_value: &str,
+    name_of_action: &str,
+    value: V
+) {
     if value == V::from_i64(0) {
         panic!(
             "{}[COUNT PANIC]{} You are {name_of_action} a Count's {name_of_value} with 0.  This will produce NaN.
@@ -1580,7 +1731,7 @@ fn panic_if_zero<V: CountValue>(name_of_value: &str, name_of_action: &str, value
     }
 }
 
-/// Will cause a panic if any of the following were to occur:
+/// Will cause a panic if any of the following were to occur during Count construction:
 /// - anchor, value, lower_bound, or upper_bound are being set to NaN.
 /// - lower_bound is being set to a value greater than upper_bound.
 /// - upper_bound is being set to a value lower than lower_bound.
@@ -1600,14 +1751,13 @@ fn panic_if_construction_is_invalid<V: CountValue>(
     panic_if_is_nan("upper_bound", "constructing", upper_bound);
 
     // Panic if either boundary is being constructed with literals that don't match their definition.
-    panic_if_lower_bound_is_greater_than_upper_bound("constructing", lower_bound, upper_bound);
-    panic_if_upper_bound_is_less_than_lower_bound("constructing", lower_bound, upper_bound);
+    panic_if_bounds_are_incorrect("constructing", lower_bound, upper_bound);
 
-    // Panic if markers are being constructed with literals outside their limits.
-    let active_lower_limit = if is_lower_bound_active { lower_bound } else { V::MIN };
-    let active_upper_limit = if is_upper_bound_active { upper_bound } else { V::MAX };
-    panic_if_value_is_out_of_range("value", "constructing", value, active_lower_limit, active_upper_limit);
-    panic_if_value_is_out_of_range("anchor", "constructing", anchor, active_lower_limit, active_upper_limit);
+    // Panic if markers are being constructed with literals outside their specified walls.
+    let active_lower_wall = if is_lower_bound_active { lower_bound } else { V::MIN };
+    let active_upper_wall = if is_upper_bound_active { upper_bound } else { V::MAX };
+    panic_if_value_is_out_of_range("value", "constructing", value, active_lower_wall, active_upper_wall);
+    panic_if_value_is_out_of_range("anchor", "constructing", anchor, active_lower_wall, active_upper_wall);
     panic_if_value_is_out_of_range("lower_bound", "constructing", lower_bound, V::MIN, V::MAX);
     panic_if_value_is_out_of_range("upper_bound", "constructing", upper_bound, V::MIN, V::MAX);
 }

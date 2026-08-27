@@ -941,7 +941,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     #[inline]
     pub fn reset(&mut self) {
         if self.is_runtime_mutable() {
-            self.count.set_marker_with_limits(CountMarker::Anchor, self.count.anchor());
+            self.count.set_marker_with_clamp(CountMarker::Anchor, self.count.anchor());
             self.stored_time = P::from_f64(0.0);
         }
         else {
@@ -1092,8 +1092,8 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             // VALUE ADDITION OR SUBTRACTION?
             // Increase or decrease current_value based on if the ticker is ticking up or down.
             match self.is_ticking_up {
-                true  => self.count.operate_with_limits(Operation::Add, CountMarker::Value, magnitude_of_time_that_passed),
-                false => self.count.operate_with_limits(Operation::Subtract, CountMarker::Value, magnitude_of_time_that_passed),
+                true  => self.count.operate_with_clamp(Operation::Add, CountMarker::Value, magnitude_of_time_that_passed),
+                false => self.count.operate_with_clamp(Operation::Subtract, CountMarker::Value, magnitude_of_time_that_passed),
             }
 
             // DETERMINE IF AN ACTIVE BOUNDARY WAS HIT
@@ -1108,7 +1108,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
                     // Reset value to the anchor if either of the count's boundaries - lower_bound and upper_bound - are hit.
                     TickerBehavior::Looper |
                     TickerBehavior::MutLooper => {
-                        self.count.set_marker_with_limits(CountMarker::Value, self.count.anchor());
+                        self.count.set_marker_with_clamp(CountMarker::Value, self.count.anchor());
                     },
 
                     // ONESHOT + FREEZING LOGIC
