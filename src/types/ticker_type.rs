@@ -912,28 +912,26 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
     // ################################ MISCELLANEOUS METHODS ################################### //
     ///
     #[inline]
-    pub fn operate_on_time_interval(
+    pub fn operate(
         &mut self,
         operation: Operation,
         value: P
     ) {
-        // PANIC EVALUATION
-        panic_if_is_nan("time_interval", "operating on", value);
-
         if self.is_runtime_mutable() {
             match operation {
-                Operation::Add      => self.time_interval = (self.time_interval + value).clamp(P::MIN_POSITIVE, P::MAX),
-                Operation::Subtract => self.time_interval = (self.time_interval - value).clamp(P::MIN_POSITIVE, P::MAX),
-                Operation::Multiply => self.time_interval = (self.time_interval * value).clamp(P::MIN_POSITIVE, P::MAX),
-                Operation::Power    => self.time_interval = self.time_interval.power(value).clamp(P::MIN_POSITIVE, P::MAX),
+                Operation::Add      => self.time_interval = self.time_interval + value,
+                Operation::Subtract => self.time_interval = self.time_interval - value,
+                Operation::Multiply => self.time_interval = self.time_interval * value,
+                Operation::Power    => self.time_interval = self.time_interval.power(value),
                 Operation::Divide   => {
                     panic_if_zero("time_interval", "dividing", value);
-                    self.time_interval = (self.time_interval / value).clamp(P::MIN_POSITIVE, P::MAX);
+                    self.time_interval = self.time_interval / value;
                 },
             }
+            panic_if_time_interval_is_invalid(".operate()", self.time_interval)
         }
         else {
-            panic_and_print_mutability_message("time_interval", "operate_on_time_interval()");
+            panic_and_print_mutability_message("time_interval", "operate()");
         }
     }
 
@@ -1096,9 +1094,8 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
                 false => self.count.operate_with_clamp(Operation::Subtract, CountMarker::Value, magnitude_of_time_that_passed),
             }
 
-            // DETERMINE IF AN ACTIVE BOUNDARY WAS HIT
-            if self.count.is_at_lower_limit(CountMarker::Value) ||
-               self.count.is_at_upper_limit(CountMarker::Value) {
+            // DETERMINE IF A WALL WAS HIT
+            if self.count.is_at_a_wall(CountMarker::Value) {
 
                 // RESET DETERMINATION
                 // Will reset stored_time or the Count's value based on a ticker's behavior.
@@ -1129,9 +1126,10 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
 
 
     // ###################################### HELPER METHODS ######################################## //
-    /// Returns true if the current behavior of the ticker is runtime mutable, otherwise false.  Best used
-    /// when mass querying tickers that could be either mutable or immutable.  Can be used to avoid
-    /// panics that would occur when attempting to mutate an immutable behavior.
+    /// Returns true if the current behavior of the ticker is runtime mutable, otherwise false.
+    ///
+    /// Best used when mass querying tickers that could be either mutable or immutable.  Can be used
+    /// to avoid panics that would occur when attempting to mutate an immutable behavior.
     ///
     /// #### Example
     /// ```
@@ -1150,7 +1148,7 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
             TickerBehavior::MutLooper  => true,
             TickerBehavior::Oneshot    => false,
             TickerBehavior::MutOneshot => true,
-            TickerBehavior::Freezing   => !self.count.is_at_a_limit(CountMarker::Value),
+            TickerBehavior::Freezing   => !self.count.is_at_a_wall(CountMarker::Value),
         }
     }
 
@@ -1184,18 +1182,6 @@ fn panic_if_zero<P: TickerPrecision>(name_of_value: &str, name_of_action: &str, 
 
 ///
 #[inline]
-fn panic_if_is_nan<P: TickerPrecision>(name_of_value: &str, name_of_action: &str, value: P) {
-    if value.is_nan() {
-        panic!(
-            "{}[TICKER PANIC]{} You are {name_of_action} a ticker's {name_of_value} with NaN.
-            NaN is not a valid TickerPrecision for any comparison, bound, or arithmetic operation.",
-            "\x1b[31m", "\x1b[0m",
-        );
-    }
-}
-
-///
-#[inline]
 fn panic_if_time_interval_is_invalid<P: TickerPrecision>(name_of_action: &str, value: P) {
     if value.is_nan() {
         panic!(
@@ -1204,10 +1190,17 @@ fn panic_if_time_interval_is_invalid<P: TickerPrecision>(name_of_action: &str, v
             "\x1b[31m", "\x1b[0m",
         );
     }
-    else if value <= P::from_f64(0.0) {
+    else if value <= P::MIN_POSITIVE {
         panic!(
             "{}[TICKER PANIC]{} You are making a ticker's time_interval be less than or equal to 0.0 with {name_of_action}.
             A value that is less than or equal to 0.0 for time_interval is NOT acceptable since it messes up the .tick() method.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+    else if value > P::MAX {
+        panic!(
+            "{}[TICKER PANIC]{} You are making a ticker's time_interval be greater than or equal to its type max (TickerPrecision::MAX) with {name_of_action}.
+            Exceeding the time_interval's max potential value would cause it to overflow.",
             "\x1b[31m", "\x1b[0m",
         );
     }
