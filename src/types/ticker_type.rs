@@ -2,23 +2,10 @@
 // Imports
 use bevy_ecs::prelude::*;
 use bevy_reflect::Reflect;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Div, Mul, Rem, RemAssign, Sub, SubAssign};
 use half::f16;
 use crate::{Count, CountMarker, CountValue, Operation};
-
-/// Used for implementing the `V` generic to define integer primitives a Ticker can store for its `start_value`, `end_value`, and `current_value`.
-///
-/// Supports i8, i16, i32 for `start_value`, `current_value`, and `end_value` within Ticker.
-///
-/// #### Why Add 1 to MIN?
-/// The MIN addition is present to help avoid absolute errors on integer ranges.  MIN's
-/// assignment on value types will always add 1 to an integer's minimum to avoid things like -128 in
-/// the i8 primitive becoming 128 after .absolute() is applied to a value.  We have to do this since
-/// 128 is outside the i8 range; 127 is the max for i8.
-// pub trait TickerValue:
-
-
 
 // ################################## TickerPrecision TRAIT ##################################### //
 /// Used for implementing the `P` generic to define float types a Ticker can use for its precision in tracking time, `P` impacts the `time_interval` and `stored_time` fields.
@@ -171,6 +158,39 @@ pub enum TickerBehavior {
     Oneshot,
     MutOneshot,
     Freezing,
+}
+
+
+
+// ######################################## TickerError ENUM ##################################### //
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TickerError {
+    TimeIntervalIsBelowMinPositive {
+        name_of_action: &'static str,
+    },
+    TimeIntervalIsAboveMax {
+        name_of_action: &'static str,
+    }
+}
+impl Display for TickerError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TickerError::TimeIntervalIsBelowMinPositive { name_of_action } => {
+                write!(f,
+                    "{}[TICKER PANIC]{} You are making a ticker's time_interval be less than or equal to 0.0 with {name_of_action}.
+                    A value that is less than or equal to 0.0 for time_interval is NOT acceptable since it messes up the .tick() method.",
+                    "\x1b[31m", "\x1b[0m",
+                )
+            },
+            TickerError::TimeIntervalIsAboveMax { name_of_action } => {
+                write!(f,
+                    "{}[TICKER PANIC]{} You are making a ticker's time_interval be greater than or equal to its type max (TickerPrecision::MAX) with {name_of_action}.
+                    Exceeding the time_interval's max potential value would cause it to overflow.",
+                    "\x1b[31m", "\x1b[0m",
+                )
+            },
+        }
+    }
 }
 
 
@@ -744,14 +764,31 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         }
     }
 
-    /// Time interval can not be negative or 0--would mess up tick calculation.
     ///
-    /// CREATE ERROR FOR SUCH A THING!  CLAMP IS BAD!
     #[inline]
-    pub fn set_time_interval(&mut self, value: P) {
+    pub fn set_time_interval(&mut self, value: P) -> Result<(), TickerError> {
 
         // PANIC EVALUATION
-        panic_if_time_interval_is_invalid("set_time_interval()", value);
+        panic_if_is_nan("time_interval", "setting", value);
+
+        if self.is_runtime_mutable() {
+            if      value < P::MIN_POSITIVE { return Err(TickerError::TimeIntervalIsBelowMinPositive { name_of_action: "set_time_interval()" }); }
+            else if value > P::MAX          { return Err(TickerError::TimeIntervalIsAboveMax { name_of_action: "set_time_interval()" }); }
+            self.time_interval = value;
+        }
+        else {
+            panic_and_print_mutability_message("time_interval", "set_time_interval()");
+        }
+
+        Ok(())
+    }
+
+    ///
+    #[inline]
+    pub fn set_time_interval_with_clamp(&mut self, value: P) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "setting", value);
 
         if self.is_runtime_mutable() {
             self.time_interval = value.clamp(P::MIN_POSITIVE, P::MAX);
@@ -916,19 +953,50 @@ impl<V: CountValue, P: TickerPrecision> Ticker<V, P> {
         &mut self,
         operation: Operation,
         value: P
-    ) {
+    ) -> Result<(), TickerError> {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "operating on", value);
+
         if self.is_runtime_mutable() {
             match operation {
-                Operation::Add      => self.time_interval = self.time_interval + value,
-                Operation::Subtract => self.time_interval = self.time_interval - value,
-                Operation::Multiply => self.time_interval = self.time_interval * value,
-                Operation::Power    => self.time_interval = self.time_interval.power(value),
+                Operation::Add      => { self.set_time_interval(self.time_interval + value) }
+                Operation::Subtract => { self.set_time_interval(self.time_interval - value) }
+                Operation::Multiply => { self.set_time_interval(self.time_interval * value) }
+                Operation::Power    => { self.set_time_interval(self.time_interval.power(value)) }
                 Operation::Divide   => {
                     panic_if_zero("time_interval", "dividing", value);
-                    self.time_interval = self.time_interval / value;
-                },
+                    self.set_time_interval(self.time_interval / value)
+                }
             }
-            panic_if_time_interval_is_invalid(".operate()", self.time_interval)
+        }
+        else {
+            panic_and_print_mutability_message("time_interval", "operate()");
+        }
+    }
+
+    ///
+    #[inline]
+    pub fn operate_with_clamp(
+        &mut self,
+        operation: Operation,
+        value: P
+    ) {
+
+        // PANIC EVALUATION
+        panic_if_is_nan("time_interval", "operating on", value);
+
+        if self.is_runtime_mutable() {
+            match operation {
+                Operation::Add      => { self.set_time_interval_with_clamp(self.time_interval + value) }
+                Operation::Subtract => { self.set_time_interval_with_clamp(self.time_interval - value) }
+                Operation::Multiply => { self.set_time_interval_with_clamp(self.time_interval * value) }
+                Operation::Power    => { self.set_time_interval_with_clamp(self.time_interval.power(value)) }
+                Operation::Divide   => {
+                    panic_if_zero("time_interval", "dividing", value);
+                    self.set_time_interval_with_clamp(self.time_interval / value)
+                }
+            }
         }
         else {
             panic_and_print_mutability_message("time_interval", "operate()");
@@ -1183,14 +1251,10 @@ fn panic_if_zero<P: TickerPrecision>(name_of_value: &str, name_of_action: &str, 
 ///
 #[inline]
 fn panic_if_time_interval_is_invalid<P: TickerPrecision>(name_of_action: &str, value: P) {
-    if value.is_nan() {
-        panic!(
-            "{}[TICKER PANIC]{} You are making a ticker's time_interval NaN with {name_of_action}.
-            NaN is not a valid TickerPrecision for any comparison, bound, or arithmetic operation.",
-            "\x1b[31m", "\x1b[0m",
-        );
-    }
-    else if value <= P::MIN_POSITIVE {
+
+    panic_if_is_nan("time_interval", name_of_action, value);
+
+    if value <= P::MIN_POSITIVE {
         panic!(
             "{}[TICKER PANIC]{} You are making a ticker's time_interval be less than or equal to 0.0 with {name_of_action}.
             A value that is less than or equal to 0.0 for time_interval is NOT acceptable since it messes up the .tick() method.",
@@ -1206,10 +1270,26 @@ fn panic_if_time_interval_is_invalid<P: TickerPrecision>(name_of_action: &str, v
     }
 }
 
+/// Causes a panic if the passed value is NaN.
+#[inline]
+fn panic_if_is_nan<P: TickerPrecision>(
+    name_of_value: &str,
+    name_of_action: &str,
+    value: P
+) {
+    if value.is_nan() {
+        panic!(
+            "{}[TICKER PANIC]{} You are {name_of_action} a Ticker's {name_of_value} with NaN.
+            NaN is not a valid TickerPrecision for any comparison, bound, or arithmetic operation.",
+            "\x1b[31m", "\x1b[0m",
+        );
+    }
+}
+
 /// Used to cause a `PANIC` when something attempts to mutate an immutable ticker.
 fn panic_and_print_mutability_message(name_of_value: &str, name_of_action: &str,) -> ! {
     panic!(
-        "{}[TICKER PANIC]{} You are attempting to mutate the {name_of_value} through {name_of_action} in a runtime immutable ticker.",
+        "{}[TICKER PANIC]{} You are attempting to mutate the {name_of_value} through {name_of_action} in a runtime immutable ticker.  You can not mutate what is immutable.",
         "\x1b[31m", "\x1b[0m",
     )
 }

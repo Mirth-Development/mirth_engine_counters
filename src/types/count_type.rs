@@ -105,19 +105,12 @@ Copy                    // CountValue types are safe to copy.
 }
 impl CountValue for u8 {
     type Difference = i16;
-
     const LOWER_LIMIT: Self = u8::MIN;
-
     const UPPER_LIMIT: Self = u8::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 3;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -179,19 +172,12 @@ impl CountValue for u8 {
 }
 impl CountValue for u16 {
     type Difference = i32;
-
     const LOWER_LIMIT: Self = u16::MIN;
-
     const UPPER_LIMIT: Self = u16::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 5;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -253,19 +239,12 @@ impl CountValue for u16 {
 }
 impl CountValue for u32 {
     type Difference = i64;
-
     const LOWER_LIMIT: Self = u32::MIN;
-
     const UPPER_LIMIT: Self = u32::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 10;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -327,19 +306,12 @@ impl CountValue for u32 {
 }
 impl CountValue for i8 {
     type Difference = i16;
-
     const LOWER_LIMIT: Self = i8::MIN + 1;
-
     const UPPER_LIMIT: Self = i8::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 3;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -401,19 +373,12 @@ impl CountValue for i8 {
 }
 impl CountValue for i16 {
     type Difference = i32;
-
     const LOWER_LIMIT: Self = i16::MIN + 1;
-
     const UPPER_LIMIT: Self = i16::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 5;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -475,19 +440,12 @@ impl CountValue for i16 {
 }
 impl CountValue for i32 {
     type Difference = i64;
-
     const LOWER_LIMIT: Self = i32::MIN + 1;
-
     const UPPER_LIMIT: Self = i32::MAX;
-
     const IS_FLOAT: bool = false;
-
     const EPSILON: Self = 0;
-
     const MAX_WHOLE_PLACES: u8 = 10;
-
     const MAX_FLOATING_PLACES: u8 = 0;
-
     const RELIABLE_FLOATING_PLACES: u8 = 0;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -549,19 +507,12 @@ impl CountValue for i32 {
 }
 impl CountValue for f16 {
     type Difference = f32;
-
     const LOWER_LIMIT: Self = f16::MIN;
-
     const UPPER_LIMIT: Self = f16::MAX;
-
     const IS_FLOAT: bool = true;
-
     const EPSILON: Self = f16::from_f32_const(1e-3);
-
     const MAX_WHOLE_PLACES: u8 = 5;
-
     const MAX_FLOATING_PLACES: u8 = 8;
-
     const RELIABLE_FLOATING_PLACES: u8 = 2;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -623,19 +574,12 @@ impl CountValue for f16 {
 }
 impl CountValue for f32 {
     type Difference = f64;
-
     const LOWER_LIMIT: Self = f32::MIN;
-
     const UPPER_LIMIT: Self = f32::MAX;
-
     const IS_FLOAT: bool = true;
-
     const EPSILON: Self = 1e-6;
-
     const MAX_WHOLE_PLACES: u8 = 39;
-
     const MAX_FLOATING_PLACES: u8 = 45;
-
     const RELIABLE_FLOATING_PLACES: u8 = 5;
 
     fn signed_difference(from: Self, to: Self) -> Self::Difference
@@ -1121,7 +1065,7 @@ impl<V: CountValue> Count<V> {
     // ################################### MARKER METHODS ##################################### //
     /// Grants the ability to apply a specified Operation onto the provided CountMarker by the number
     /// that is passed in.  Will return a CountError if the operation ends up pushing a marker past
-    /// a limit or active boundary.  Here are the following return scenarios:
+    /// a wall.  Here are the following return scenarios:
     /// - **CountError::ExceedsLowerBound**: Operation on anchor or value marker caused for exceeding the active lower_bound, or the upper_bound marker is being operated to be below the lower_bound.
     /// - **CountError::ExceedsUpperBound**: Operation on anchor or value marker caused for exceeding the active upper_bound, or the lower_bound marker is being operated to be above the upper_bound.
     /// - **CountError::ExceedsLowerLimit**: Operation is setting a marker to be below the Count type's lower limit (CountValue::LOWER_LIMIT).
@@ -1134,8 +1078,8 @@ impl<V: CountValue> Count<V> {
     ///
     /// ### Why Does This Exist?
     /// To allow operations on a marker and to grant you the ability to define what happens when an
-    /// operation causes a marker to exceed one of its limits.  If you'd like to just clamp to a limit
-    /// or active boundary when it has been exceeded, use .operate_with_clamp().
+    /// operation causes a marker to exceed one of its limits.  If you'd like to just clamp to wall
+    /// when it has been exceeded, use .operate_with_clamp().
     #[inline]
     pub fn operate(
         &mut self,
@@ -1671,7 +1615,7 @@ impl<V: CountValue> Count<V> {
 
 
     // #################################### HELPER METHODS ###################################### //
-    /// Will print out all the field information of a Count, plus the Count type's data limits for its markers.
+    /// Will print out all the field information of a Count, plus the limits for its markers.
     #[inline]
     pub fn print_information(&self) {
         println!("ANCHOR : {}", self.anchor);
